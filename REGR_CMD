@@ -1,0 +1,1 @@
+regr_runner --tests verif/ovip_axi_testbench/lib/regr.yaml --stop_on_fail --repeat 1

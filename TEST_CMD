@@ -1,0 +1,1 @@
+test_runner --block ovip_axi_testbench --test ovip_axi_b2b_test --seed 777 --dump-mem --verbosity UVM_HIGH

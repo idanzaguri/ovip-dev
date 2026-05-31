@@ -1,0 +1,26 @@
+{% set OVIP_COMMON = WA_ROOT ~ "/verif/ovip_common/"  %}
+{% set OVIP_AXI    = WA_ROOT ~ "/verif/ovip_axi/src/" %}
+dependencies:
+  design:
+  verif:
+defines:
+  - "UVM_REPORT_DISABLE_FILE_LINE"
+  - "OVIP_AXI_MAX_ID_WIDTH=10"
+  - "OVIP_AXI_MAX_ADDR_WIDTH=48"
+  - "OVIP_AXI_MAX_DATA_WIDTH=4096"
+include_dirs:
+  - "{{ OVIP_COMMON }}"
+  - "{{ OVIP_COMMON }}/mem"
+  - "{{ OVIP_AXI }}"
+  - "{{ OVIP_AXI }}/seqlib"
+  - "src"
+files:
+  - "{{ OVIP_COMMON }}/ovip_global_pkg.sv"
+  - "{{ OVIP_COMMON }}/mem/ovip_mem_pkg.sv"
+  - "{{ OVIP_AXI }}/ovip_axi_pkg.sv"
+  - "src/ovip_tests_pkg.sv"
+  - "src/tb.sv"
+
+sim_args:
+comp_args:
+
