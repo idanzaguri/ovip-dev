@@ -52,15 +52,15 @@ class ovip_axi_data_integrity_test extends ovip_axi_base_test;
 		master_cfg.default_bready_pattern = '{cycles:'{0,1}, loop:0};
 	endfunction : build_phase
 
-	function string bytestream2string(bytestream bs);
+	function string bytestream2string(ovip_bytestream bs);
 		string str = "";
 		foreach(bs[ii]) str = $sformatf("%x%s",bs[ii],str);
 		return str;
 	endfunction : bytestream2string
 
 	task main_phase(uvm_phase phase);
-		bytestream wr_data;
-		bytestream rd_data;
+		ovip_bytestream wr_data;
+		ovip_bytestream rd_data;
 		ovip_axi_addr_t start_addr = $urandom_range(20,0);
 		ovip_axi_addr_t addr;
 		int chunk_size[$];
@@ -126,7 +126,7 @@ class ovip_axi_data_integrity_test extends ovip_axi_base_test;
 		for(ovip_axi_size_t burst_size = OVIP_AXI_SIZE_1B; 1; burst_size = ovip_axi_size_t'(int'(burst_size)+1))
 		begin
 			int op;
-			bytestream __wr;
+			ovip_bytestream __wr;
 
 			ovip_axi_bytestream_sequence rd_seq = ovip_axi_bytestream_sequence::type_id::create("rd_seq");
 			`uvm_info("data_integ_check", $sformatf("RD addr=0x%x size=%0d (%s)",addr,chunk_size[0], burst_size.name()), UVM_LOW)
