@@ -1,0 +1,4 @@
+ovip_axi_stream_smoke_test
+ovip_axi_stream_multibeat_test
+ovip_axi_stream_backpressure_test
+ovip_axi_stream_reserved_byte_qual_test

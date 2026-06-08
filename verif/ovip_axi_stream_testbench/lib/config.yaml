@@ -1,0 +1,22 @@
+{% set OVIP_COMMON     = WA_ROOT ~ "/verif/ovip_common/"          %}
+{% set OVIP_AXI_STREAM = WA_ROOT ~ "/verif/ovip_axi_stream/src/" %}
+dependencies:
+  design:
+  verif:
+defines:
+  - "UVM_REPORT_DISABLE_FILE_LINE"
+include_dirs:
+  - "{{ OVIP_COMMON }}"
+  - "{{ OVIP_COMMON }}/mem"
+  - "{{ OVIP_AXI_STREAM }}"
+  - "{{ OVIP_AXI_STREAM }}/seqlib"
+  - "src"
+files:
+  - "{{ OVIP_COMMON }}/ovip_global_pkg.sv"
+  - "{{ OVIP_COMMON }}/mem/ovip_mem_pkg.sv"
+  - "{{ OVIP_AXI_STREAM }}/ovip_axi_stream_pkg.sv"
+  - "src/ovip_axi_stream_tests_pkg.sv"
+  - "src/tb.sv"
+
+sim_args:
+comp_args:

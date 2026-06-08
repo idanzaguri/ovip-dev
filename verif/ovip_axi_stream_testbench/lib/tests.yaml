@@ -1,0 +1,12 @@
+compilations:
+  - name: default
+    files:
+    args:
+      - "--top tb"
+      - "--dut tb"
+tests:
+  {% for test in ["ovip_axi_stream_smoke_test", "ovip_axi_stream_multibeat_test", "ovip_axi_stream_backpressure_test", "ovip_axi_stream_reserved_byte_qual_test"] %}
+  - name: {{ test }}
+    comp: default
+    args: "--uvm_test {{ test }}"
+  {% endfor %}

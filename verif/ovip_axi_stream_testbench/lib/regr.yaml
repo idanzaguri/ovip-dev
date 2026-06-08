@@ -1,0 +1,12 @@
+# Test configuration file for regression
+tests:
+  {% for test in ["ovip_axi_stream_smoke_test", "ovip_axi_stream_multibeat_test", "ovip_axi_stream_backpressure_test", "ovip_axi_stream_reserved_byte_qual_test"] %}
+  - block: "ovip_axi_stream_testbench"
+    test: {{ test }}
+    weight: 1
+  {% endfor %}
+
+repeat: 5
+max_parallel: 4
+stop_on_fail: true
+codecov: false
