@@ -1,0 +1,22 @@
+{% set OVIP_COMMON = WA_ROOT ~ "/verif/ovip_common/" %}
+{% set OVIP_APB    = WA_ROOT ~ "/verif/ovip_apb/src/" %}
+dependencies:
+  design:
+  verif:
+defines:
+  - "UVM_REPORT_DISABLE_FILE_LINE"
+include_dirs:
+  - "{{ OVIP_COMMON }}"
+  - "{{ OVIP_COMMON }}/mem"
+  - "{{ OVIP_APB }}"
+  - "{{ OVIP_APB }}/seqlib"
+  - "src"
+files:
+  - "{{ OVIP_COMMON }}/ovip_global_pkg.sv"
+  - "{{ OVIP_COMMON }}/mem/ovip_mem_pkg.sv"
+  - "{{ OVIP_APB }}/ovip_apb_pkg.sv"
+  - "src/ovip_apb_tests_pkg.sv"
+  - "src/tb.sv"
+
+sim_args:
+comp_args:

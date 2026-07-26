@@ -1,0 +1,12 @@
+# Test configuration file for regression
+tests:
+  {% for test in ["ovip_apb_smoke_test", "ovip_apb_wait_states_test", "ovip_apb_error_response_test", "ovip_apb_strobe_test"] %}
+  - block: "ovip_apb_testbench"
+    test: {{ test }}
+    weight: 1
+  {% endfor %}
+
+repeat: 5
+max_parallel: 4
+stop_on_fail: true
+codecov: false

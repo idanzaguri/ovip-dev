@@ -1,0 +1,12 @@
+compilations:
+  - name: default
+    files:
+    args:
+      - "--top tb"
+      - "--dut tb"
+tests:
+  {% for test in ["ovip_apb_smoke_test", "ovip_apb_wait_states_test", "ovip_apb_error_response_test", "ovip_apb_strobe_test"] %}
+  - name: {{ test }}
+    comp: default
+    args: "--uvm_test {{ test }}"
+  {% endfor %}
