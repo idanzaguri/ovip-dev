@@ -31,6 +31,7 @@ Same shape for every VIP added here:
 | [`examples/ovip_axi/04_response_timing/`](examples/ovip_axi/04_response_timing/) | Slave inserts a configurable `bresp_delay` after WLAST and a per-beat `data_delay[]` staircase on reads; channel watcher logs `t=…` on every handshake. |
 | [`examples/ovip_axi_stream/01_loopback/`](examples/ovip_axi_stream/01_loopback/) | Smallest AXI-Stream hello-world: transmitter + receiver on the same interface, 4 single-beat packets, success when `UVM_ERROR : 0`. |
 | [`examples/ovip_axi_stream/02_rx_to_mem/`](examples/ovip_axi_stream/02_rx_to_mem/) | Receiver-side subscriber pulls `trans.get_data_bytes()` (null/position bytes filtered out per the spec) and writes the resulting byte stream into `ovip_mem`. Round-trip verified by reading the mem back. |
+| [`examples/ovip_apb/01_loopback/`](examples/ovip_apb/01_loopback/) | Smallest APB hello-world: requester + memory-backed completer on the same interface, 4 writes + self-checking read-backs, success when `UVM_ERROR : 0`. |
 | [`examples/ovip_ace/01_coherent_loopback/`](examples/ovip_ace/01_coherent_loopback/) | **:warning: AI-generated, unverified VIP.** Master + interconnect ACE agents; coherent writes/reads with AxDOMAIN/AxSNOOP run to `UVM_ERROR : 0`. The snoop path is not yet confirmed. |
 
 ## Quickstart
