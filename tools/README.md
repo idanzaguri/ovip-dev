@@ -26,7 +26,7 @@ python3 tools/compile_check.py --vip apb --run    # one VIP, simulate its EDA bu
 | `vip` | Each `verif/ovip_*/ovip_*.f` builds standalone -- the first thing an adopter does. Catches a filelist missing a dependency. |
 | `combined` | All VIP filelists plus all testbench packages compile in **one** compilation unit and one library. Catches cross-VIP collisions (duplicate macros, types, classes, interfaces) that per-VIP builds hide. The `tb.sv` tops are left out, since every testbench names its top `tb`. |
 | `tb` | Each `verif/ovip_*_testbench` builds the way `test_runner.py` builds it (same `lib/config.yaml`), `tb.sv` included. |
-| `eda` | The EDA Playground bundle for each VIP is regenerated and compiled both ways the Playground might (single- and multi-file compilation unit), and the expected top module is checked to still be there. `--run` also simulates it. |
+| `eda` | The EDA Playground bundle for each VIP, plus the all-VIP bundle, is regenerated and compiled both ways the Playground might (single- and multi-file compilation unit), and the expected top module is checked to still be there. `--run` also simulates each one. |
 | `examples` | Every `examples/*/*/Makefile` compiles **and runs** clean. Opt-in (`--stages all`) because it simulates. |
 
 Logs and libraries land under `sim/compile_check/` (gitignored); the exit code
@@ -44,7 +44,15 @@ python3 tools/bundle_for_eda.py --list
 python3 tools/bundle_for_eda.py --vip axi --out eda_bundle/ --clean
 python3 tools/bundle_for_eda.py --vip axi --test ovip_axi_b2b_test   # pick the active test
 python3 tools/bundle_for_eda.py --vip ace --top example    # no testbench -> use an example
+python3 tools/bundle_for_eda.py --vip all --out eda_all/   # every VIP in one bundle
 ```
+
+`--vip all` is the cross-simulator check. It puts every VIP into a single
+bundle behind a generated top that instantiates each VIP's interface, waits out
+a reset and finishes; no test runs and no testbench defines are applied, so
+what it proves is that the family builds and elaborates in its out-of-the-box
+configuration. Upload it once and run it under each simulator EDA Playground
+offers to cover the tools we have no licence for locally.
 
 Output:
 

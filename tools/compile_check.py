@@ -267,11 +267,12 @@ def stage_tb(vips, args):
     return jobs
 
 
-def eda_bundle_and_compile(vip, args, mfcu):
-    """Generate the Playground bundle for one VIP and compile it the way EDA
-    Playground would: every uploaded file handed to the compiler at once."""
+def eda_bundle_and_compile(vip_short, args, mfcu):
+    """Generate the Playground bundle for one VIP ('all' for the every-VIP
+    bundle) and compile it the way EDA Playground would: every uploaded file
+    handed to the compiler at once."""
     stage = "eda"
-    name = f"{vip.short}{'_mfcu' if mfcu else '_fcu'}"
+    name = f"{vip_short}{'_mfcu' if mfcu else '_fcu'}"
     workdir = Path(args.out) / f"{stage}_{name}"
     shutil.rmtree(workdir, ignore_errors=True)
     workdir.mkdir(parents=True, exist_ok=True)
@@ -279,7 +280,7 @@ def eda_bundle_and_compile(vip, args, mfcu):
 
     t0 = time.time()
     gen_log = workdir / "bundle.log"
-    rc = run([sys.executable, str(BUNDLER), "--vip", vip.short, "--out", str(bundle), "--clean"],
+    rc = run([sys.executable, str(BUNDLER), "--vip", vip_short, "--out", str(bundle), "--clean"],
              REPO, gen_log, env=sim_env())
     if rc:
         return Result(stage, name, "FAIL", time.time() - t0, gen_log, "bundler failed")
@@ -340,10 +341,15 @@ def compiled_tops(comp_log):
 
 
 def stage_eda(vips, args):
+    subjects = list(vips)
+    if len(vips) > 1:
+        # One bundle with every VIP in it -- the upload used to check the whole
+        # family on a simulator we do not have locally.
+        subjects.append("all")
     jobs = []
-    for vip in vips.values():
+    for subject in subjects:
         for mfcu in (False, True):
-            jobs.append(lambda v=vip, m=mfcu: eda_bundle_and_compile(v, args, m))
+            jobs.append(lambda s=subject, m=mfcu: eda_bundle_and_compile(s, args, m))
     return jobs
 
 
