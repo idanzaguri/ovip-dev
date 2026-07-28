@@ -62,27 +62,37 @@ Output:
   header comment.
 * `eda_00_top.sv` + `eda_*_body_*.sv` -- upload via **Add file**.
 
-Everything except `eda_tb.sv` is wrapped in an `` `ifdef OVIP_EDA_BUNDLE ``
-guard, so the bundle compiles the same whether the Playground hands the
-uploaded files to the compiler or only makes them available for `` `include ``.
-As a side effect the bundle always presents exactly one top module, so no
-simulator has to guess.
+### What the Playground actually compiles
 
-Validate a bundle locally before uploading it:
+Its run command is `<sim> ... uvm_macros.svh design.sv testbench.sv`: **only
+the two panes are compiled**, and uploaded files exist purely to be
+`` `include ``d. So `eda_tb.sv` goes in the testbench pane, design.sv stays
+empty, and the uploads must keep their exact filenames.
+
+`eda_00_top.sv` therefore carries a plain include guard and is self-sufficient.
+Pasting it into a pane instead of `eda_tb.sv` still produces the design and one
+top module. It must never be guarded on a macro only `eda_tb.sv` defines: that
+turns a mis-paste into a file that compiles to nothing, and the only symptom is
+the simulator later saying "no top-level unit found", which points nowhere.
+Body chunks keep their per-package `` `ifdef ..._BODY `` guard, since a chunk
+outside its package cannot compile at all.
+
+### Validating a bundle before uploading
 
 ```bash
 python3 tools/compile_check.py --stages eda --vip axi --run
 ```
 
-The `eda` stage builds each bundle twice, because a compilation unit is the
-scope a `` `define `` and any `$unit`-level declaration lives in, and tools
-disagree on how to form it:
+The `eda` stage builds every bundle three times, once per way the files can
+reach a compiler. All three must yield exactly one top module:
 
-* **fcu** (single-file compilation unit) -- every file is its own unit, so
-  macros do not leak between files. Questa's default.
-* **mfcu** (multi-file compilation unit, `vlog -mfcu`) -- all files in one
-  `vlog` invocation share a unit, so a macro from the first file is visible in
-  the last.
+| Variant | Files compiled | Models |
+|---|---|---|
+| `site` | `eda_tb.sv` | the real Playground flow; `--run` simulates this one |
+| `alone` | `eda_00_top.sv` | someone pasted the wrong file into the pane |
+| `panes` | `eda_00_top.sv` + `eda_tb.sv`, one compilation unit | someone filled in both panes |
 
-We do not control which one EDA Playground uses, so the bundle is built to work
-in both and `compile_check.py --stages eda` proves it before an upload.
+A compilation unit is the scope a `` `define `` and any `$unit`-level
+declaration lives in, and tools form it differently: Questa gives each file its
+own unit by default, `vlog -mfcu` merges them, and Xcelium merges by default.
+The `panes` variant uses `-mfcu` for that reason.

@@ -267,12 +267,23 @@ def stage_tb(vips, args):
     return jobs
 
 
-def eda_bundle_and_compile(vip_short, args, mfcu):
+# How the bundle can end up in front of a compiler. EDA Playground compiles
+# design.sv and testbench.sv only -- uploaded files are there for `include --
+# so 'site' is the real flow and the other two are the ways a user can get the
+# panes wrong. All three have to produce exactly one top module.
+EDA_VARIANTS = {
+    "site":  (["eda_tb.sv"],                    False),  # eda_tb.sv in testbench.sv
+    "alone": (["eda_00_top.sv"],                False),  # eda_00_top.sv pasted instead
+    "panes": (["eda_00_top.sv", "eda_tb.sv"],   True),   # one in each pane, single unit
+}
+
+
+def eda_bundle_and_compile(vip_short, args, variant):
     """Generate the Playground bundle for one VIP ('all' for the every-VIP
-    bundle) and compile it the way EDA Playground would: every uploaded file
-    handed to the compiler at once."""
+    bundle) and compile it the way EDA Playground would."""
     stage = "eda"
-    name = f"{vip_short}{'_mfcu' if mfcu else '_fcu'}"
+    name = f"{vip_short}_{variant}"
+    sources, mfcu = EDA_VARIANTS[variant]
     workdir = Path(args.out) / f"{stage}_{name}"
     shutil.rmtree(workdir, ignore_errors=True)
     workdir.mkdir(parents=True, exist_ok=True)
@@ -287,10 +298,12 @@ def eda_bundle_and_compile(vip_short, args, mfcu):
 
     # The Playground has no include path: every file sits next to the others,
     # so compile from inside the bundle directory with bare file names.
-    files = sorted(p.name for p in bundle.glob("eda_*.sv"))
-    lines = files
-    filelist = bundle / "comp_filelist.f"
-    filelist.write_text("\n".join(lines) + "\n")
+    missing = [f for f in sources if not (bundle / f).is_file()]
+    if missing:
+        return Result(stage, name, "FAIL", time.time() - t0, gen_log,
+                      f"bundle is missing {', '.join(missing)}")
+    filelist = bundle / f"comp_filelist_{variant}.f"
+    filelist.write_text("\n".join(sources) + "\n")
 
     setup, cmd = compile_cmds(args.sim, filelist.name, mfcu=mfcu)
     if setup:
@@ -308,15 +321,19 @@ def eda_bundle_and_compile(vip_short, args, mfcu):
     if warnings and args.pedant:
         return Result(stage, name, "FAIL", secs, log, f"{warnings} warning(s), --pedant")
 
-    # A bundle that compiles but lost its top module is useless on the
-    # Playground, and the compiler is happy to let that through.
+    # The failure this catches: a bundle that compiles to nothing at all still
+    # exits 0, and the simulator only complains later with "no top-level unit
+    # found", which says nothing about the cause. Exactly one top, every time.
     top = bundle_top_module(gen_log)
-    if key == "questa" and top and not compiled_tops(log).issuperset({top}):
-        return Result(stage, name, "FAIL", secs, log,
-                      f"top module '{top}' is not in the compiled library")
+    if key == "questa" and top:
+        tops = compiled_tops(log)
+        if tops != {top}:
+            return Result(stage, name, "FAIL", secs, log,
+                          f"expected top module '{top}', compiled tops: "
+                          f"{', '.join(sorted(tops)) or 'none'}")
 
-    note = f"{len(files)} files, top {top}"
-    if args.run and not mfcu:
+    note = f"{len(sources)} of {len(list(bundle.glob('eda_*.sv')))} files, top {top}"
+    if args.run and variant == "site":
         rc = run(["vsim", "-c", "-work", "work", "-do", "run -all; quit", top],
                  bundle, bundle / "run.log", env=sim_env())
         errors, _, first = scan_log(bundle / "run.log", RUN_FAIL, [], COMP_WAIVE[key])
@@ -348,8 +365,8 @@ def stage_eda(vips, args):
         subjects.append("all")
     jobs = []
     for subject in subjects:
-        for mfcu in (False, True):
-            jobs.append(lambda s=subject, m=mfcu: eda_bundle_and_compile(s, args, m))
+        for variant in EDA_VARIANTS:
+            jobs.append(lambda s=subject, v=variant: eda_bundle_and_compile(s, args, v))
     return jobs
 
 
