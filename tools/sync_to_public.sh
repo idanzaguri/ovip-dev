@@ -34,6 +34,7 @@ PUBLIC_PATHS=(
     verif/ovip_common
     verif/ovip_axi
     verif/ovip_axi_stream
+    verif/ovip_apb
     verif/ovip_ace
     examples
 )
