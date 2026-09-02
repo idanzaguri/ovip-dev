@@ -9,13 +9,17 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+## [0.1.1] -- 2026-09-02
+
 ### Fixed -- VIP
 
 - The master driver now aligns to the clocking event before driving an item a
   sequence delivered mid-cycle (a #-timed test, or any sequence not
-  synchronized to the bus clock). Unaligned entry meant the first beat de-phased from the clocking event and was lost against a receiver already holding TREADY high. A held item
-  from `try_next_item` skips the alignment, so back-to-back operation is
-  unchanged: the next transfer still starts on the completion edge.
+  synchronized to the bus clock). Unaligned entry meant the first beat
+  de-phased from the clocking event and was lost against a receiver already
+  holding TREADY high. A held item from `try_next_item` skips the alignment,
+  so back-to-back operation is unchanged: the next transfer still starts on
+  the completion edge.
 
 ## [0.1.0] -- 2026-06-09
 
