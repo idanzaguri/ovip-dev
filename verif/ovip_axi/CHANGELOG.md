@@ -9,6 +9,12 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+### Fixed -- VIP
+
+- The WRAP byte-lane calculation is done in 64 bits. On an address at or
+  above 2^31 a 32-bit `int` overflowed, the modulo went negative, and the
+  byte lanes came out as `[-1:-2]`.
+
 ## [0.3.0] -- 2026-07-28
 
 ### Added -- VIP

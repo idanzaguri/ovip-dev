@@ -372,12 +372,14 @@ class ovip_axi_trans extends uvm_sequence_item;
 			// `total_size = burst_size * (len+1)` (a power of 2 by spec).
 			// `wrap_low` is the start of the wrap window; beat addresses stay
 			// in [wrap_low, wrap_low + total_size).
-			int total_size = burst_size * (len + 1);
-			int wrap_low   = addr & ~(total_size - 1);
+			// 64-bit math: a 32-bit int overflows on addresses at or above 2^31
+			// and the modulo then goes negative (byte lanes came out as [-1:-2])
+			longint total_size = burst_size * (len + 1);
+			longint wrap_low   = longint'(addr) & ~(total_size - 1);
 			for(int ii=1; ii<=len; ii++)
 			begin
-				int beat_addr = wrap_low + ((addr - wrap_low + ii*burst_size) % total_size);
-				transfer_starting_byte_lane[ii] = beat_addr % bus_width;
+				longint beat_addr = wrap_low + ((longint'(addr) - wrap_low + ii*burst_size) % total_size);
+				transfer_starting_byte_lane[ii] = int'(beat_addr % bus_width);
 			end
 			return;
 		end
