@@ -11,13 +11,22 @@
 // writes one entry, each read pops one entry, in order. The test compares
 // the read beats against the written beats one-for-one.
 //
+// It runs the pair twice: at an aligned address, then `FW_UNALIGNED_OFFSET
+// bytes into the word. A FIXED burst repeats its address, so every beat of
+// the unaligned pair uses only the byte lanes from that offset up (AXI
+// A3.4.1). A VIP-to-VIP round trip cannot show a lane error, because both
+// ends would make the same one, so the test also checks each beat's lanes
+// on the bus.
+//
 // The code paths exercised:
-//   - calculate_transfer_starting_byte_lane(): the non-narrow early-return.
-//   - Master driver drive_w_channel: beat 0 takes the `burst_index == 0`
-//     branch (shift by 0); beats 1..N take the raw-passthrough branch.
-//   - Slave driver drive_rd_channel and monitor sample_*: symmetric.
+//   - calculate_transfer_starting_byte_lane(): the FIXED branch, which comes
+//     before the non-narrow early-return.
+//   - Master driver drive_w_channel and sample_rd_response, slave driver
+//     drive_rd_channel, monitor sample_*: every FIXED beat is shifted by the
+//     first beat's lane (by 0 when aligned).
 
 `define FW_FIFO_ADDR 4
+`define FW_UNALIGNED_OFFSET 2
 
 class ovip_mem_full_width_fifo extends ovip_mem;
 
@@ -84,6 +93,11 @@ class ovip_axi_fixed_full_width_alignment_test extends ovip_axi_base_test;
 
 	task main_phase(uvm_phase phase);
 		ovip_mem::word_t written_beats[$];
+		ovip_axi_data_t  unaligned_beats[$];
+		ovip_axi_data_t  bus_data[$];
+		ovip_axi_strb_t  bus_strb[$];
+		int nb = 4 - `FW_UNALIGNED_OFFSET;       // bytes each unaligned beat carries
+		ovip_axi_data_t nb_mask = (ovip_axi_data_t'(1) << (nb * 8)) - 1;
 		super.main_phase(phase);
 		phase.raise_objection(this);
 
@@ -118,6 +132,69 @@ class ovip_axi_fixed_full_width_alignment_test extends ovip_axi_base_test;
 				foreach(seq.tr_pool[ii].data_beats[jj])
 					if(written_beats.pop_front() != seq.tr_pool[ii].data_beats[jj])
 						`uvm_error("FIFO_POP_MISMATCH", $sformatf("beat[%0d] read=0x%0x", jj, seq.tr_pool[ii].data_beats[jj]))
+		end
+
+		// Unaligned FIXED write: every beat carries its low `nb` bytes on
+		// lanes FW_UNALIGNED_OFFSET..3, and strobes no lane below them.
+		begin
+			ovip_axi_simple_wr_bursts_seq seq = ovip_axi_simple_wr_bursts_seq::type_id::create("seq");
+			seq.num_trans = 1;
+			seq.size      = '{OVIP_AXI_SIZE_4B};
+			seq.addr      = '{`FW_FIFO_ADDR + `FW_UNALIGNED_OFFSET};
+			seq.len       = '{4};
+			seq.burst     = OVIP_AXI_BURST_FIXED;
+			seq.min_delay_between_beats = 0;
+			seq.max_delay_between_beats = 0;
+			fork : w_watch
+				forever
+				begin
+					@(master_vif.monitor_cb iff master_vif.monitor_cb.wvalid && master_vif.monitor_cb.wready);
+					bus_data.push_back(master_vif.monitor_cb.wdata);
+					bus_strb.push_back(master_vif.monitor_cb.wstrb);
+				end
+			join_none
+			seq.start(master_agent.sqr);
+			disable w_watch;
+			foreach(seq.tr_pool[0].data_beats[jj])
+				unaligned_beats.push_back(seq.tr_pool[0].data_beats[jj] & nb_mask);
+			foreach(bus_data[jj])
+			begin
+				if(bus_strb[jj] & ((1 << `FW_UNALIGNED_OFFSET) - 1))
+					`uvm_error("FIXED_LANE", $sformatf("W beat[%0d] strobes a lane below the address: wstrb=%b", jj, bus_strb[jj]))
+				if(((bus_data[jj] >> (`FW_UNALIGNED_OFFSET * 8)) & nb_mask) != unaligned_beats[jj])
+					`uvm_error("FIXED_LANE", $sformatf("W beat[%0d] is not on the address's lanes: wdata=0x%0x, beat=0x%0x", jj, bus_data[jj], unaligned_beats[jj]))
+			end
+			if(bus_data.size() != unaligned_beats.size())
+				`uvm_error("FIXED_LANE", $sformatf("saw %0d W beats on the bus, expected %0d", bus_data.size(), unaligned_beats.size()))
+		end
+
+		// Unaligned FIXED read: the same lanes on the bus, and the same bytes
+		// back to the sequence, right-justified.
+		bus_data.delete();
+		begin
+			ovip_axi_simple_rd_bursts_seq seq = ovip_axi_simple_rd_bursts_seq::type_id::create("seq");
+			seq.burst = OVIP_AXI_BURST_FIXED;
+			seq.size  = '{OVIP_AXI_SIZE_4B};
+			seq.addr  = '{`FW_FIFO_ADDR + `FW_UNALIGNED_OFFSET};
+			seq.len   = '{4};
+			fork : r_watch
+				forever
+				begin
+					@(master_vif.monitor_cb iff master_vif.monitor_cb.rvalid && master_vif.monitor_cb.rready);
+					bus_data.push_back(master_vif.monitor_cb.rdata);
+				end
+			join_none
+			seq.start(master_agent.sqr);
+			disable r_watch;
+			foreach(bus_data[jj])
+				if(jj < unaligned_beats.size()
+				   && ((bus_data[jj] >> (`FW_UNALIGNED_OFFSET * 8)) & nb_mask) != unaligned_beats[jj])
+					`uvm_error("FIXED_LANE", $sformatf("R beat[%0d] is not on the address's lanes: rdata=0x%0x, beat=0x%0x", jj, bus_data[jj], unaligned_beats[jj]))
+			foreach(seq.tr_pool[0].data_beats[jj])
+				if(jj < unaligned_beats.size() && seq.tr_pool[0].data_beats[jj] != unaligned_beats[jj])
+					`uvm_error("FIFO_POP_MISMATCH", $sformatf("unaligned beat[%0d] read=0x%0x, written=0x%0x", jj, seq.tr_pool[0].data_beats[jj], unaligned_beats[jj]))
+			if(bus_data.size() != unaligned_beats.size())
+				`uvm_error("FIXED_LANE", $sformatf("saw %0d R beats on the bus, expected %0d", bus_data.size(), unaligned_beats.size()))
 		end
 
 		phase.drop_objection(this);

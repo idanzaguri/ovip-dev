@@ -354,17 +354,21 @@ class ovip_axi_trans extends uvm_sequence_item;
 		transfer_starting_byte_lane[0] += (addr % burst_size);
 
 		is_narrow_transfer = (burst_size != int'(bus_width));
-		// For a non-narrow transfer (burst_size == bus_width) every beat fills the whole
-		// data bus starting at byte lane 0, so there are no per-beat lane offsets to compute.
-		// Only narrow transfers (and the unaligned first beat) need the per-beat calculation below.
-		if(!is_narrow_transfer) return;
 
+		// FIXED repeats its address, so every beat uses the first beat's byte
+		// lanes, unaligned offset included (AXI A3.4.1). That holds at full
+		// width too, so this comes before the full-width return below.
 		if(burst == OVIP_AXI_BURST_FIXED)
 		begin
 			for(int ii=1; ii<=len; ii++)
 				transfer_starting_byte_lane[ii] = transfer_starting_byte_lane[0];
 			return;
 		end
+
+		// For a non-narrow transfer (burst_size == bus_width) every beat fills the whole
+		// data bus starting at byte lane 0, so there are no per-beat lane offsets to compute.
+		// Only narrow transfers (and the unaligned first beat) need the per-beat calculation below.
+		if(!is_narrow_transfer) return;
 
 		if(burst == OVIP_AXI_BURST_WRAP)
 		begin
