@@ -25,6 +25,15 @@ and this package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - `ovip_mem`: `num_lines`, `line_exists`, `get_lines`, and `compare`
   (a word that differs, or a line one side touched and the other did not,
   is a mismatch; the first `max_report` are reported as `MEM/COMPARE`).
+- `ovip_mem` valid ranges: `add_valid_range`, `num_valid_ranges`,
+  `is_valid`. With none set every address is valid, as before. Once any
+  is set, a `write`, `read`, `write_bytestream` or `read_bytestream` that
+  touches a byte outside all of them reports `MEM/OUT_OF_RANGE` and does
+  nothing, so a slave's memory is bounded to what the slave owns and a
+  transaction delivered to the wrong place is named when it arrives.
+  `ovip_mem_space.add_region` and `add_striped_region` set them on the
+  sub-memory from the region (on a striped region, the chunks each sub
+  holds, the partial last one included).
 
 ## [0.3.0] -- 2026-07-28
 

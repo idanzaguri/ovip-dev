@@ -17,6 +17,15 @@ class ovip_mem extends uvm_component;
 	word_t init_pattern = 'hdeadbeef;
 	bit randomize_uninitialized = 0;
 
+	// The valid ranges. With none set every address is valid, as always.
+	// Once any is set, an access that touches a byte outside all of them
+	// reports MEM/OUT_OF_RANGE and does nothing: a slave's memory is then
+	// bounded to the ranges the slave owns, and a transaction delivered to
+	// the wrong place is named the moment it arrives. ovip_mem_space sets
+	// them from its map.
+	typedef struct { addr_t base; addr_t size; } range_t;
+	protected range_t valid_ranges[$];
+
 	`uvm_component_utils(ovip_mem)
 
 	function new(string name = "ovip_mem", uvm_component parent);
@@ -59,6 +68,14 @@ class ovip_mem extends uvm_component;
 
 	// Basic memory dump (debug).
 	extern virtual function void print();
+
+	// The valid ranges: add one, count them, and test a range of bytes
+	// against them (1 when none is set, or every byte of [addr, addr + size)
+	// lies in some range).
+	extern virtual function void add_valid_range(addr_t base, addr_t size);
+	extern virtual function int  num_valid_ranges();
+	extern virtual function bit  is_valid(addr_t addr, addr_t size = 1);
+	extern protected virtual function bit refuse_if_invalid(addr_t addr, addr_t size, string what);
 
 	// The lines touched so far: how many, whether one exists, and all of
 	// them in ascending order. A line is WORD_SIZE bytes at an aligned
@@ -106,6 +123,7 @@ endfunction : prepare_for_access
 
 
 function void ovip_mem::write(addr_t addr, word_t data, byte_enable_t byte_enable = -1);
+	if (refuse_if_invalid(addr, WORD_SIZE, "write")) return;
 	prepare_for_access(addr);
 	write_aligned(addr, data, byte_enable);
 endfunction : write
@@ -135,6 +153,7 @@ endfunction : write_aligned
 
 
 function ovip_mem::word_t ovip_mem::read(addr_t addr);
+	if (refuse_if_invalid(addr, WORD_SIZE, "read")) return '0;
 	prepare_for_access(addr);
 	return mem[addr];
 endfunction : read
@@ -145,6 +164,7 @@ function ovip_bytestream ovip_mem::read_bytestream(addr_t addr, int size = WORD_
 	int byte_offset = addr % WORD_SIZE;
 	int num_full_words = int'($ceil( (size + byte_offset) / real'(WORD_SIZE) ));
 	int produced = 0;
+	if (refuse_if_invalid(addr, size, "read")) return rd_data;
 	addr -= byte_offset; // word-align
 
 	for (int i = 0; i < num_full_words; i++)
@@ -179,6 +199,7 @@ function void ovip_mem::write_bytestream(addr_t addr, ref byte data[$], ref bit 
 	// scale even with the upfront alloc.
 	byte data_arr[] = new[size];
 	bit  be_arr[]   = new[byte_enable.size()];
+	if (refuse_if_invalid(addr, size, "write")) return;
 	foreach(data[i])        data_arr[i] = data[i];
 	foreach(byte_enable[i]) be_arr[i]   = byte_enable[i];
 
@@ -245,6 +266,59 @@ function void ovip_mem::print();
 		$display("Address: %0d, Data: %h", addr, mem[addr]);
 	end
 endfunction : print
+
+
+function void ovip_mem::add_valid_range(addr_t base, addr_t size);
+	range_t r;
+	if (size == 0)
+	begin
+		`uvm_error("MEM/BAD_RANGE", $sformatf("%s: a valid range of size 0 at 0x%0h", get_name(), base))
+		return;
+	end
+	r.base = base; r.size = size;
+	foreach (valid_ranges[i])
+		if (valid_ranges[i].base > base)
+		begin
+			valid_ranges.insert(i, r);
+			return;
+		end
+	valid_ranges.push_back(r);
+endfunction : add_valid_range
+
+
+function int ovip_mem::num_valid_ranges();
+	return valid_ranges.size();
+endfunction : num_valid_ranges
+
+
+function bit ovip_mem::is_valid(addr_t addr, addr_t size = 1);
+	addr_t pos = addr;
+	if (valid_ranges.size() == 0) return 1;
+	while (pos < addr + size)
+	begin
+		// the farthest end among the ranges holding `pos`; ranges may touch or overlap
+		addr_t best = 0;
+		bit found = 0;
+		foreach (valid_ranges[i])
+			if (pos >= valid_ranges[i].base && pos - valid_ranges[i].base < valid_ranges[i].size)
+			begin
+				addr_t e = valid_ranges[i].base + valid_ranges[i].size;
+				if (!found || e > best) best = e;
+				found = 1;
+			end
+		if (!found) return 0;
+		pos = best;
+	end
+	return 1;
+endfunction : is_valid
+
+
+function bit ovip_mem::refuse_if_invalid(addr_t addr, addr_t size, string what);
+	if (is_valid(addr, size)) return 0;
+	`uvm_error("MEM/OUT_OF_RANGE", $sformatf("%s: %s of %0d byte(s) at 0x%0h touches an address outside the %0d valid range(s); nothing done",
+		get_name(), what, size, addr, valid_ranges.size()))
+	return 1;
+endfunction : refuse_if_invalid
 
 
 function int ovip_mem::num_lines();

@@ -32,6 +32,11 @@
 // hole: resolve() returns 0, covers() returns 0, and an access that touches
 // one reports MEM_SPACE/HOLE and does nothing.
 //
+// Every region also bounds its sub-memory: add_region and add_striped_region
+// give the sub the range the region occupies in it (ovip_mem::add_valid_range),
+// so a slave VIP that writes its memory outside what it owns is named by
+// MEM/OUT_OF_RANGE at that moment, not at the end of the test.
+//
 // write() and read() here take any byte address, unlike ovip_mem's, which
 // need a word-aligned one.
 
@@ -89,7 +94,7 @@ class ovip_mem_space extends uvm_component;
 	// shadow of this one). Returns the mismatch count; see ovip_mem::compare.
 	extern virtual function int compare(ovip_mem_space other, string tag = "", int max_report = 16);
 
-	extern protected virtual function void insert_region(region_t r);
+	extern protected virtual function bit  insert_region(region_t r);
 	extern protected virtual function int  region_at(addr_t addr);
 endclass : ovip_mem_space
 
@@ -105,40 +110,78 @@ endfunction : add_sub
 function void ovip_mem_space::add_region(string name, addr_t base, addr_t size, int sub, addr_t sub_base);
 	region_t r;
 	r.name = name; r.base = base; r.size = size; r.subs = '{sub}; r.sub_base = sub_base; r.granule = 0;
-	insert_region(r);
+	if (!insert_region(r)) return;
+	subs[sub].add_valid_range(sub_base, size);
 endfunction : add_region
 
 
 function void ovip_mem_space::add_striped_region(string name, addr_t base, addr_t size, int stripe_subs[$], int granule, addr_t sub_base = 0);
 	region_t r;
 	if (granule <= 0)
+	begin
 		`uvm_fatal("MEM_SPACE/BAD_REGION", $sformatf("region '%s': a striped region needs a granule above 0, got %0d", name, granule))
+		return;
+	end
 	if (stripe_subs.size() == 0)
+	begin
 		`uvm_fatal("MEM_SPACE/BAD_REGION", $sformatf("region '%s': a striped region needs at least one sub", name))
+		return;
+	end
 	r.name = name; r.base = base; r.size = size; r.subs = stripe_subs; r.sub_base = sub_base; r.granule = granule;
-	insert_region(r);
+	if (!insert_region(r)) return;
+	// each sub holds its chunks packed from sub_base: chunk k lands on sub
+	// (k mod N) at (k div N)*granule, and the last chunk may be partial
+	begin
+		int    n = stripe_subs.size();
+		addr_t chunks = (size + granule - 1) / granule;
+		foreach (stripe_subs[j])
+		begin
+			addr_t count, last, last_size;
+			if (chunks <= j) continue;
+			count     = (chunks - 1 - j) / n + 1;          // chunks j, j+n, ... below `chunks`
+			last      = j + n * (count - 1);               // the sub's last chunk index
+			last_size = (last == chunks - 1 && size % granule != 0) ? size % granule : granule;
+			subs[stripe_subs[j]].add_valid_range(sub_base, (count - 1) * granule + last_size);
+		end
+	end
 endfunction : add_striped_region
 
 
-function void ovip_mem_space::insert_region(region_t r);
+// Insert a region sorted by base; 0 (and a fatal) when it is refused. The
+// refusals return as well, so a report catcher that demotes the fatal in a
+// test still leaves the map untouched.
+function bit ovip_mem_space::insert_region(region_t r);
 	if (r.size == 0)
+	begin
 		`uvm_fatal("MEM_SPACE/BAD_REGION", $sformatf("region '%s': size 0", r.name))
+		return 0;
+	end
 	if (r.base + r.size - 1 < r.base)
+	begin
 		`uvm_fatal("MEM_SPACE/BAD_REGION", $sformatf("region '%s': 0x%0h + 0x%0h wraps the address space", r.name, r.base, r.size))
+		return 0;
+	end
 	foreach (r.subs[i])
 		if (r.subs[i] < 0 || r.subs[i] >= subs.size())
+		begin
 			`uvm_fatal("MEM_SPACE/BAD_REGION", $sformatf("region '%s': sub %0d does not exist (%0d subs)", r.name, r.subs[i], subs.size()))
+			return 0;
+		end
 	foreach (regions[i])
 		if (r.base < regions[i].base + regions[i].size && regions[i].base < r.base + r.size)
+		begin
 			`uvm_fatal("MEM_SPACE/OVERLAP", $sformatf("region '%s' [0x%0h, 0x%0h) overlaps region '%s' [0x%0h, 0x%0h)",
 				r.name, r.base, r.base + r.size, regions[i].name, regions[i].base, regions[i].base + regions[i].size))
+			return 0;
+		end
 	foreach (regions[i])
 		if (regions[i].base > r.base)
 		begin
 			regions.insert(i, r);
-			return;
+			return 1;
 		end
 	regions.push_back(r);
+	return 1;
 endfunction : insert_region
 
 

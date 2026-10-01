@@ -2,18 +2,22 @@
 // address map. Standalone, no AXI agents. Checks the three ways a region
 // maps to a sub (the system address, the offset, packed), an alias, a
 // striped region, accesses that cross a map boundary, the word helpers, the
-// random fill, the compare, and the refusal of a hole.
+// random fill, the compare, the refusal of a hole and of an overlapping
+// region, and the valid ranges every region puts on its sub-memory.
 
-class ovip_mem_space_hole_catcher extends uvm_report_catcher;
+// Swallows one message id (an error or a fatal) and counts it.
+class ovip_mem_space_catcher extends uvm_report_catcher;
+	string id;
 	int caught;
-	function new(string name = "ovip_mem_space_hole_catcher");
+	function new(string name = "ovip_mem_space_catcher", string id = "");
 		super.new(name);
+		this.id = id;
 	endfunction
 	function action_e catch();
-		if (get_id() == "MEM_SPACE/HOLE") begin caught++; return CAUGHT; end
+		if (get_id() == id) begin caught++; return CAUGHT; end
 		return THROW;
 	endfunction
-endclass : ovip_mem_space_hole_catcher
+endclass : ovip_mem_space_catcher
 
 
 class ovip_mem_space_test extends uvm_test;
@@ -26,6 +30,8 @@ class ovip_mem_space_test extends uvm_test;
 	// components, so they are built in build_phase like everything else
 	ovip_mem       a2, b2, c2, d2, s2[4], e[8];
 	ovip_mem_space shadow, empty;
+	ovip_mem       pstripe[3];      // the partial-stripe case
+	ovip_mem_space pspace;
 	int checks;
 
 	`uvm_component_utils(ovip_mem_space_test)
@@ -48,6 +54,8 @@ class ovip_mem_space_test extends uvm_test;
 		foreach (e[i])  e[i]  = ovip_mem::type_id::create($sformatf("e%0d", i), this);
 		shadow = ovip_mem_space::type_id::create("shadow", this);
 		empty  = ovip_mem_space::type_id::create("empty", this);
+		foreach (pstripe[i]) pstripe[i] = ovip_mem::type_id::create($sformatf("p%0d", i), this);
+		pspace = ovip_mem_space::type_id::create("pspace", this);
 	endfunction : build_phase
 
 	// A byte that depends on its system address, so a misplaced byte shows.
@@ -182,7 +190,7 @@ class ovip_mem_space_test extends uvm_test;
 
 		// a hole is refused, with nothing done
 		begin
-			ovip_mem_space_hole_catcher catcher = new();
+			ovip_mem_space_catcher catcher = new("hole", "MEM_SPACE/HOLE");
 			ovip_bytestream w = pattern('h3000, 4), r;
 			uvm_report_cb::add(null, catcher);
 			space.write_bytestream('h3000, w);
@@ -190,6 +198,49 @@ class ovip_mem_space_test extends uvm_test;
 			uvm_report_cb::delete(null, catcher);
 			expect_ok(catcher.caught == 2, "a write into a hole and a read across one each report MEM_SPACE/HOLE");
 			expect_ok(r.size() == 0, "the refused read returns nothing");
+		end
+
+		// a region that overlaps one in the map is refused, and the map is untouched
+		begin
+			ovip_mem_space_catcher catcher = new("overlap", "MEM_SPACE/OVERLAP");
+			uvm_report_cb::add(null, catcher);
+			space.add_region("bad", 'h1800, 'h100, ia, 0);
+			uvm_report_cb::delete(null, catcher);
+			expect_ok(catcher.caught == 1, "an overlapping region reports MEM_SPACE/OVERLAP");
+			expect_ok(space.num_regions() == 7, "the refused region is not in the map");
+		end
+
+		// every sub is bounded to what the map put on it
+		begin
+			ovip_mem_space_catcher catcher = new("range", "MEM/OUT_OF_RANGE");
+			ovip_bytestream w = pattern('h2000, 4), r;
+			expect_ok(a.num_valid_ranges() == 1 && a.is_valid('h1000, 'h1000) && !a.is_valid('h0FFF, 2) && !a.is_valid('h2000, 1), "A is valid on [0x1000, 0x2000) only");
+			expect_ok(d.num_valid_ranges() == 1 && d.is_valid(0, 'h1000) && !d.is_valid('h1000, 1), "D is valid on [0, 0x1000)");
+			expect_ok(b.num_valid_ranges() == 2 && b.is_valid(0, 'h100) && !b.is_valid('h100, 1), "B's two aliases give one valid span");
+			expect_ok(c.num_valid_ranges() == 2 && c.is_valid('h180, 'h100) && !c.is_valid('h2FF, 2), "C's packed regions touch, so a span across them is valid");
+			foreach (s[k])
+				expect_ok(s[k].num_valid_ranges() == 1 && s[k].is_valid(0, 1024) && !s[k].is_valid(1024, 1), $sformatf("stripe sub %0d is valid on its two chunks, [0, 1024)", k));
+			uvm_report_cb::add(null, catcher);
+			a.write_bytestream('h2000, w);        // one past A's region
+			r = a.read_bytestream('h0FFE, 4);      // starts below it
+			void'(a.read('h2000));
+			a.write('h0FFC, 32'h1);
+			uvm_report_cb::delete(null, catcher);
+			expect_ok(catcher.caught == 4, "a write, a byte read, a word read and a word write outside the range each report MEM/OUT_OF_RANGE");
+			expect_ok(!a.line_exists('h2000) && !a.line_exists('h0FFC) && r.size() == 0, "nothing was created or read outside the range");
+		end
+
+		// a striped region whose last chunk is partial bounds its subs exactly
+		begin
+			ovip_mem p0, p1, p2;
+			ovip_mem_space part;
+			int stripe[$];
+			p0 = pstripe[0]; p1 = pstripe[1]; p2 = pstripe[2]; part = pspace;
+			stripe.push_back(part.add_sub(p0)); stripe.push_back(part.add_sub(p1)); stripe.push_back(part.add_sub(p2));
+			part.add_striped_region("odd", 'h100000, 7 * 64 + 16, stripe, 64);   // 8 chunks, the last 16 bytes
+			expect_ok(p0.is_valid(0, 3 * 64) && !p0.is_valid(3 * 64, 1), "sub 0 holds chunks 0, 3, 6: 192 bytes");
+			expect_ok(p1.is_valid(0, 2 * 64 + 16) && !p1.is_valid(2 * 64 + 16, 1), "sub 1 holds chunks 1, 4 and the partial 7: 144 bytes");
+			expect_ok(p2.is_valid(0, 2 * 64) && !p2.is_valid(2 * 64, 1), "sub 2 holds chunks 2, 5: 128 bytes");
 		end
 
 		`uvm_info("MEM_SPACE_TEST", $sformatf("%0d checks", checks), UVM_LOW)
