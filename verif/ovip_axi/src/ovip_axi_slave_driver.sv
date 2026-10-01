@@ -244,21 +244,14 @@ function void ovip_axi_slave_driver::drive_rd_channel(ovip_axi_trans tr);
 	if(cfg.rd_id_width) vif.slave_cb.rid   <= tr.id;
 	if(cfg.ruser_width) vif.slave_cb.ruser <= tr.ruser;
 
-	if(cfg.protocol_type == OVIP_PROTOCOL_AXI4_LITE)
-	begin
-		vif.slave_cb.rresp <= tr.resp;
-		return;
-	end
+	// RRESP rides every beat: the beat's own entry when the sequence filled
+	// resp_beats, else `resp` on all of them
+	vif.slave_cb.rresp <= tr.resp_of_beat(tr.burst_index);
 
-	if(tr.burst_index == tr.len)
-	begin
-		vif.slave_cb.rlast <= 1;
-		vif.slave_cb.rresp <= tr.resp;
-	end
-	else
-	begin
-		vif.slave_cb.rlast <= 0;
-	end
+	if(cfg.protocol_type == OVIP_PROTOCOL_AXI4_LITE)
+		return;
+
+	vif.slave_cb.rlast <= (tr.burst_index == tr.len);
 endfunction : drive_rd_channel
 
 

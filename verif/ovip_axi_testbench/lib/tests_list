@@ -34,6 +34,7 @@ ovip_axi_mid_test_reset_test
 ovip_axi_narrow_transfer_alignment_test
 ovip_axi_rd_interleaving_test
 ovip_axi_rd_ooo_test
+ovip_axi_rresp_per_beat_test
 ovip_axi_signal_stability_test
 ovip_axi_simple_timing_test
 ovip_axi_wrap_burst_test

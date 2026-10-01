@@ -350,6 +350,15 @@ The base class sets `set_response_queue_depth(-1)` for you so the driver isn't t
 
 If you'd rather write the loop by hand (you want fine-grained sequencer arbitration, layered sequences, etc.), `seqlib/ovip_axi_simple_wr_bursts_seq.sv` and `seqlib/ovip_axi_simple_rd_bursts_seq.sv` are the canonical templates. They build the `tr_pool` manually, call `start_item`/`finish_item` per item, and then loop over `get_response(...)` at the end.
 
+#### What comes back on a read
+
+The item the driver puts back carries every R beat: `data_beats[i]` is beat
+i's data (lane-0 aligned under `auto_byte_lanes_alignment`), `resp_beats[i]`
+is beat i's RRESP, and `resp` is the worst of them (DECERR over SLVERR over
+EXOKAY over OKAY). So a burst whose middle beat answered SLVERR has
+`resp == OVIP_AXI_RESP_SLVERR` and the beat named in `resp_beats`. A write
+has `resp` only, the BRESP. The monitor's items carry the same fields.
+
 ### Slave sequences (zero-time response rule)
 
 The slave driver pulls one item at a time from the slave sequence via the **response/request port** and immediately uses it to drive the bus:
@@ -377,7 +386,8 @@ The reason the rule exists: an immediate response (BRESP on the cycle after WLAS
 |---|---|
 | Variable BRESP latency after WLAST | `req.bresp_delay = N;` |
 | Per-beat read-data spacing | `req.data_delay.push_back(N);` (one per beat) |
-| Inject SLVERR / DECERR | `req.resp = OVIP_AXI_RESP_SLVERR;` |
+| Inject SLVERR / DECERR | `req.resp = OVIP_AXI_RESP_SLVERR;` (every beat of a read) |
+| Inject an error on some beats of a read | `req.resp_beats = '{OVIP_AXI_RESP_OKAY, OVIP_AXI_RESP_SLVERR, OVIP_AXI_RESP_OKAY, OVIP_AXI_RESP_OKAY}; req.resp = OVIP_AXI_RESP_SLVERR;` (one entry per beat; `resp` the worst of them) |
 | Pad write response with `buser` | `req.buser = ...;` |
 | Pad read response with `ruser` | `req.ruser = ...;` (driver carries it on each beat) |
 

@@ -232,12 +232,10 @@ function void ovip_axi_master_driver::sample_rd_response(ovip_axi_trans tr);
 			rdata >>= tr.transfer_starting_byte_lane[tr.burst_index]*8;
 	tr.data_beats[tr.burst_index] = rdata;
 
-	// Sample RLAST and RRESP
+	// Sample RRESP on every beat (resp becomes the worst of them), RLAST on the last
+	tr.set_resp_beat(tr.burst_index, ovip_axi_resp_t'(vif.master_cb.rresp));
 	if(vif.master_cb.rlast || cfg.protocol_type == OVIP_PROTOCOL_AXI4_LITE)
-	begin
 		tr.got_last_beat = 1'b1;
-		tr.resp = ovip_axi_resp_t'(vif.master_cb.rresp);
-	end
 
 	if(cfg.ruser_width) tr.ruser = vif.master_cb.ruser & RUSER_MASK;
 endfunction : sample_rd_response

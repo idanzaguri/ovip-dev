@@ -9,6 +9,20 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+### Added -- VIP
+
+- `ovip_axi_trans.resp_beats[$]`: the RRESP of every beat of a read, in
+  beat order. The master driver and the monitor fill it beat by beat, and
+  `resp` is now the WORST of the beats (DECERR over SLVERR over EXOKAY
+  over OKAY) instead of the last beat's RRESP. An error on a middle beat
+  was invisible before: the last beat overwrote it. A slave sequence may
+  fill `resp_beats` to answer beats differently; the slave driver drives
+  each beat from its entry, and from `resp` on every beat when the list
+  is empty, as before. The driver now drives RRESP on every beat of a
+  burst, not only the last. A write, and a single-beat read, are
+  unchanged. `ovip_axi_rresp_per_beat_test` is the proof; the transaction
+  log marks a mixed read with `*` after the response and lists the beats.
+
 ### Fixed -- VIP
 
 - An AXI4-Lite agent now drives and samples AWPROT and ARPROT, which
