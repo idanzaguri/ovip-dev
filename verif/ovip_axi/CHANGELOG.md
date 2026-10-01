@@ -32,6 +32,9 @@ breaks are called out explicitly in their changelog entry.
 
 ### Fixed -- VIP
 
+- The monitor no longer X/Z-checks AWID, ARID, BID and RID on an AXI4-Lite
+  agent: a Lite port has no ID pins, so an undriven ID wire is the normal
+  state there, and a bench had to tie them to keep the check quiet.
 - An AXI4-Lite agent now drives and samples AWPROT and ARPROT, which
   AXI4-Lite has (IHI0022 B1.1). The master driver returned before driving
   them, and the monitor returned before sampling, X-checking and
