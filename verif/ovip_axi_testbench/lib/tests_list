@@ -39,4 +39,5 @@ ovip_axi_signal_stability_test
 ovip_axi_simple_timing_test
 ovip_axi_wrap_burst_test
 ovip_axi_xz_test
+ovip_mem_space_test
 ovip_mem_test

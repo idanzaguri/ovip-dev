@@ -6,6 +6,26 @@ this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `ovip_mem_space` in `mem/ovip_mem_space.sv`: a memory built from
+  `ovip_mem` instances with an address map. The masters of a system see
+  one address space; each slave sees its own linear space; the map
+  between them is the system's. A region of the system space lands on
+  one sub-memory at an offset (`add_region`), or is striped over several
+  in round-robin chunks (`add_striped_region`, memory interleaving). The
+  system-space `write_bytestream`, `read_bytestream`, `write`, `read` and
+  `fill_random` split a range at every map boundary and gather the pieces;
+  `resolve` and `covers` answer where a byte lives; two regions on one
+  sub-memory with one base are an alias; a hole reports `MEM_SPACE/HOLE`
+  and does nothing; `compare` checks a space against its shadow sub by
+  sub. The slaves keep using their own `ovip_mem` untouched.
+- `ovip_mem`: `num_lines`, `line_exists`, `get_lines`, and `compare`
+  (a word that differs, or a line one side touched and the other did not,
+  is a mismatch; the first `max_report` are reported as `MEM/COMPARE`).
+
 ## [0.3.0] -- 2026-07-28
 
 ### Added

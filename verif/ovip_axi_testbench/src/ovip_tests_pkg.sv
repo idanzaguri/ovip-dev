@@ -7,6 +7,7 @@ package ovip_tests_pkg;
 	import ovip_axi_pkg::*;
 
 	`include "ovip_mem_test.sv"
+	`include "ovip_mem_space_test.sv"
 
 	`include "ovip_axi_expected_errors_report_server.sv"
 	`include "ovip_axi_base_test.sv"

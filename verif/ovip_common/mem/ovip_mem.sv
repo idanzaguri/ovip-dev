@@ -60,6 +60,18 @@ class ovip_mem extends uvm_component;
 	// Basic memory dump (debug).
 	extern virtual function void print();
 
+	// The lines touched so far: how many, whether one exists, and all of
+	// them in ascending order. A line is WORD_SIZE bytes at an aligned
+	// address, created on its first access.
+	extern virtual function int num_lines();
+	extern virtual function bit line_exists(addr_t addr);
+	extern virtual function void get_lines(ref addr_t lines[$]);
+
+	// Compare the lines of two memories. A line whose word differs, or that
+	// one side touched and the other did not, is one mismatch. Returns the
+	// count; reports the first max_report of them as uvm_error, tagged.
+	extern virtual function int compare(ovip_mem other, string tag = "", int max_report = 16);
+
 endclass : ovip_mem
 
 
@@ -233,5 +245,55 @@ function void ovip_mem::print();
 		$display("Address: %0d, Data: %h", addr, mem[addr]);
 	end
 endfunction : print
+
+
+function int ovip_mem::num_lines();
+	return mem.num();
+endfunction : num_lines
+
+
+function bit ovip_mem::line_exists(addr_t addr);
+	return mem.exists(align_address_to_word_size(addr));
+endfunction : line_exists
+
+
+function void ovip_mem::get_lines(ref addr_t lines[$]);
+	addr_t a;
+	lines.delete();
+	if (mem.first(a))
+		do lines.push_back(a); while (mem.next(a));
+endfunction : get_lines
+
+
+function int ovip_mem::compare(ovip_mem other, string tag = "", int max_report = 16);
+	int mismatches = 0;
+	addr_t a;
+	string who = (tag == "") ? get_name() : tag;
+	if (mem.first(a))
+		do begin
+			if (!other.mem.exists(a))
+			begin
+				mismatches++;
+				if (mismatches <= max_report)
+					`uvm_error("MEM/COMPARE", $sformatf("%s: line 0x%0h is %h here and was never touched there", who, a, mem[a]))
+			end
+			else if (other.mem[a] !== mem[a])
+			begin
+				mismatches++;
+				if (mismatches <= max_report)
+					`uvm_error("MEM/COMPARE", $sformatf("%s: line 0x%0h is %h here and %h there", who, a, mem[a], other.mem[a]))
+			end
+		end while (mem.next(a));
+	if (other.mem.first(a))
+		do begin
+			if (!mem.exists(a))
+			begin
+				mismatches++;
+				if (mismatches <= max_report)
+					`uvm_error("MEM/COMPARE", $sformatf("%s: line 0x%0h is %h there and was never touched here", who, a, other.mem[a]))
+			end
+		end while (other.mem.next(a));
+	return mismatches;
+endfunction : compare
 
 `endif
