@@ -5,7 +5,7 @@ compilations:
       - "--top tb"
       - "--dut tb"
 tests:
-  {% for test in ["ovip_apb_smoke_test", "ovip_apb_wait_states_test", "ovip_apb_error_response_test", "ovip_apb_strobe_test"] %}
+  {% for test in ["ovip_apb_smoke_test", "ovip_apb_wait_states_test", "ovip_apb_error_response_test", "ovip_apb_strobe_test", "ovip_apb_slave_out_of_range_test"] %}
   - name: {{ test }}
     comp: default
     args: "--uvm_test {{ test }}"

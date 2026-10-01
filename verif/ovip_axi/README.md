@@ -388,6 +388,7 @@ The reason the rule exists: an immediate response (BRESP on the cycle after WLAS
 | Per-beat read-data spacing | `req.data_delay.push_back(N);` (one per beat) |
 | Inject SLVERR / DECERR | `req.resp = OVIP_AXI_RESP_SLVERR;` (every beat of a read) |
 | Inject an error on some beats of a read | `req.resp_beats = '{OVIP_AXI_RESP_OKAY, OVIP_AXI_RESP_SLVERR, OVIP_AXI_RESP_OKAY, OVIP_AXI_RESP_OKAY}; req.resp = OVIP_AXI_RESP_SLVERR;` (one entry per beat; `resp` the worst of them) |
+| Refuse what the slave does not own | `mem.add_valid_range(base, size)` on the backing memory: a request that touches a byte outside the ranges is answered SLVERR, a read returns zeros, the memory is untouched, and `SLAVE_SEQ/OUT_OF_RANGE` is reported unless `report_out_of_range` is cleared. With no range set every address is in range |
 | Pad write response with `buser` | `req.buser = ...;` |
 | Pad read response with `ruser` | `req.ruser = ...;` (driver carries it on each beat) |
 

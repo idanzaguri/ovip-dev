@@ -69,6 +69,13 @@ class ovip_axi_base_slave_sequence extends uvm_sequence#(ovip_axi_trans);
 	//                 Also cheaper in simulation -- no fork-join_none watcher.
 	// Both modes correctly skip the memory write on SLVERR/DECERR responses.
 	bit wr_mem_update_on_bresp = 1;
+
+	// A request outside the memory's valid ranges (ovip_mem::add_valid_range)
+	// is answered SLVERR and never touches the memory: a read returns zero
+	// beats, a write is not committed. It is reported as SLAVE_SEQ/OUT_OF_RANGE
+	// unless this is cleared, for a test that aims outside on purpose. With no
+	// valid range set the check is off and every address is in range.
+	bit report_out_of_range = 1;
 	protected int memory_word_size;
 	protected ovip_axi_trans virt_mem_trans;
 
@@ -220,6 +227,23 @@ class ovip_axi_base_slave_sequence extends uvm_sequence#(ovip_axi_trans);
 		
 		end
 	endfunction : write_fixed_burst_transaction_to_mem
+
+
+	// The bytes a burst touches, against the memory's valid ranges: INCR the
+	// span of its size-aligned containers, WRAP its aligned window, FIXED one
+	// container. 1 with no memory or no range set.
+	virtual function bit request_in_range(ovip_axi_trans tr);
+		longint unsigned size_bytes = 64'd1 << tr.size;
+		longint unsigned beats = tr.len + 1;
+		ovip_mem::addr_t start, bytes;
+		if(mem == null || mem.num_valid_ranges() == 0) return 1;
+		case(tr.burst)
+			OVIP_AXI_BURST_FIXED: begin bytes = size_bytes;         start = tr.addr & ~(size_bytes - 1); end
+			OVIP_AXI_BURST_WRAP : begin bytes = beats * size_bytes; start = tr.addr & ~(bytes - 1);      end
+			default             : begin bytes = beats * size_bytes; start = tr.addr & ~(size_bytes - 1); end
+		endcase
+		return mem.is_valid(start, bytes);
+	endfunction : request_in_range
 
 
 	task write_transaction_to_mem(ovip_axi_trans tr);
@@ -471,6 +495,21 @@ class ovip_axi_base_slave_sequence extends uvm_sequence#(ovip_axi_trans);
 					repeat(req.len+1) req.data_beats.push_back(0);
 				else
 					req.bresp_delay = 0;
+				finish_item(req);
+				continue;
+			end
+
+			// outside the memory's valid ranges: SLVERR, the memory untouched
+			if(!request_in_range(req))
+			begin
+				if(report_out_of_range)
+					`uvm_error("SLAVE_SEQ/OUT_OF_RANGE", $sformatf("%s: %s touches an address outside the memory's %0d valid range(s): answering SLVERR, memory untouched",
+						p_sequencer.get_full_name(), req.convert2string(), mem.num_valid_ranges()))
+				req.resp = OVIP_AXI_RESP_SLVERR;
+				if(req.tr_type == OVIP_AXI_READ_TRANS)
+					repeat(req.len+1) req.data_beats.push_back(0);
+				else
+					req.bresp_delay = get_bresp_delay();
 				finish_item(req);
 				continue;
 			end

@@ -22,6 +22,13 @@ breaks are called out explicitly in their changelog entry.
   burst, not only the last. A write, and a single-beat read, are
   unchanged. `ovip_axi_rresp_per_beat_test` is the proof; the transaction
   log marks a mixed read with `*` after the response and lists the beats.
+- `ovip_axi_base_slave_sequence` answers SLVERR to a request outside the
+  backing memory's valid ranges (`ovip_mem::add_valid_range`), with the
+  memory untouched and zero read beats, and reports it as
+  `SLAVE_SEQ/OUT_OF_RANGE` unless `report_out_of_range` is cleared.
+  `request_in_range(tr)` is the hook: INCR the span of the size-aligned
+  containers, WRAP the aligned window, FIXED one container. With no range
+  set on the memory nothing changes. `ovip_axi_slave_out_of_range_test`.
 
 ### Fixed -- VIP
 
