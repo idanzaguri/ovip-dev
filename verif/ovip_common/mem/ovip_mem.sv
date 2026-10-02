@@ -185,7 +185,7 @@ endfunction : read_bytestream
 function void ovip_mem::write_bytestream(addr_t addr, ref byte data[$], ref bit byte_enable[$] = empty_bitstream);
 	int byte_offset = addr % WORD_SIZE; // Calculate byte offset within the first word
 	int size = data.size();
-	int num_full_words = (size - byte_offset + WORD_SIZE - 1) / WORD_SIZE - 1; // Calculate the number of full words
+	int num_full_words;                 // the whole words after the first, partial one: set below
 	int data_offset = 0;
 	word_t word;
 	byte_enable_t strobe;
@@ -223,7 +223,12 @@ function void ovip_mem::write_bytestream(addr_t addr, ref byte data[$], ref bit 
 		data_offset = WORD_SIZE-byte_offset;
 	end
 
-	// Write the full words
+	// Write the full words: what is left after the first word, in whole words.
+	// (The old count, ceil((size - offset) / WORD_SIZE) - 1, was one short
+	// for a large offset, so the last-word branch indexed past the word, and
+	// one too many for a small one, so a zero byte was written past the
+	// stream.)
+	num_full_words = (size > data_offset) ? (size - data_offset) / WORD_SIZE : 0;
 	for (int i = 0; i < num_full_words; i++) begin
 		strobe = 0;
 

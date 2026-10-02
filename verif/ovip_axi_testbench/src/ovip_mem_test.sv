@@ -22,6 +22,28 @@ class ovip_mem_test extends uvm_test;
 		super.run_phase(phase);
 		phase.raise_objection(this);
 
+		// write_bytestream at every offset inside a word and every size up to
+		// three words, with a guard byte on each side: the bytes land, the
+		// guards stay. (The full-word count was off by one both ways.)
+		begin
+			int checks = 0;
+			for(int off = 0; off < 4; off++)
+				for(int n = 1; n <= 12; n++)
+				begin
+					ovip_mem::addr_t base = 'h1000 + off + 'h100 * n;
+					byte fill[$], data[$], got[$];
+					repeat(n + 2) fill.push_back(8'ha5);
+					mem.write_bytestream(base - 1, fill);          // guards and the range
+					repeat(n) data.push_back($urandom);
+					mem.write_bytestream(base, data);
+					got = mem.read_bytestream(base - 1, n + 2);
+					if(got[0] != 8'ha5 || got[n + 1] != 8'ha5 || got[1 : n] != data)
+						`uvm_error("MEM", $sformatf("write_bytestream at offset %0d of %0d bytes: got %p for %p", off, n, got, data))
+					else checks++;
+				end
+			`uvm_info("MEM", $sformatf("write_bytestream: %0d check(s) passed", checks), UVM_LOW)
+		end
+
 		// ovip_mem benchmark!!!
 		begin
 			byte wdata[100][$];

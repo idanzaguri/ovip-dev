@@ -35,6 +35,15 @@ and this package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   sub-memory from the region (on a striped region, the chunks each sub
   holds, the partial last one included).
 
+### Fixed
+
+- `ovip_mem::write_bytestream` counted the full words after the first,
+  partial one as ceil((size - offset) / WORD_SIZE) - 1: one short for a
+  large offset (the last-word branch then indexed past the word) and one
+  too many for a small one (a zero byte was written past the stream). The
+  count is now what is left after the first word, in whole words.
+  `ovip_mem_test` checks every offset and size up to three words.
+
 ## [0.3.0] -- 2026-07-28
 
 ### Added
