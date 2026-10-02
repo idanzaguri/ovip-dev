@@ -30,8 +30,30 @@ breaks are called out explicitly in their changelog entry.
   containers, WRAP the aligned window, FIXED one container. With no range
   set on the memory nothing changes. `ovip_axi_slave_out_of_range_test`.
 
+- `ovip_axi_bytestream_sequence` grew into the data-level sequence a bench
+  drives traffic with: `burst` (INCR, or FIXED for a packet into one data
+  register: beat k carries bytes k*size.. of the stream, at most 16 beats
+  per burst), `max_len` (a cap on the beats per burst, for a slave or a
+  fabric that takes less than the port), `size` defaulting to the bus
+  width, one beat of the bus width per burst on an AXI4-Lite port whatever
+  the caller asked, and `trans[$]`, the bursts with their responses after
+  `start` returns, summed up by `worst_resp()` and `all_okay()`. It now
+  extends `ovip_axi_base_master_sequence`, so the response queue is
+  unbounded (it was 100 deep; a stream of more bursts lost responses). The
+  INCR split now cuts on the 4 KiB distance, so a cap that is not a power
+  of two works. `ovip_axi_bytestream_test` (random bus width and alignment
+  per seed: strobe holes, caps, FIXED both ways against a slave that logs
+  the beats) and `ovip_axi_bytestream_lite_test` are the proof.
+- `ovip_axi_base_slave_sequence` writes and reads a FIXED burst through its
+  INCR path one beat at a time, so a FIXED beat may be wider than the
+  memory word (it was refused with `MISSING_FEATURE` above the word size,
+  4 bytes by default).
+
 ### Fixed -- VIP
 
+- `ovip_axi_base_slave_sequence::write_transaction_to_mem` and
+  `populate_data_from_mem` are virtual now, as their comments promised: a
+  subclass that overrides them was not called from the base body.
 - The monitor no longer X/Z-checks AWID, ARID, BID and RID on an AXI4-Lite
   agent: a Lite port has no ID pins, so an undriven ID wire is the normal
   state there, and a bench had to tie them to keep the check quiet.

@@ -359,6 +359,42 @@ EXOKAY over OKAY). So a burst whose middle beat answered SLVERR has
 `resp == OVIP_AXI_RESP_SLVERR` and the beat named in `resp_beats`. A write
 has `resp` only, the BRESP. The monitor's items carry the same fields.
 
+### Byte streams: `ovip_axi_bytestream_sequence`
+
+For data rather than bursts: a `ovip_bytestream` (bytes) lands at `addr`, or
+`read_size` bytes come back from it in `data`. The sequence cuts the stream
+into bursts of `size` bytes per beat (default: the bus width) and at most
+`max_len`+1 beats (default: what the port allows) and sends them back to back
+under one `id`, so the driver pipelines them and the responses stay in order.
+
+| `burst` | the stream is | rule |
+|---|---|---|
+| `OVIP_AXI_BURST_INCR` (default) | the bytes from `addr` upward | an unaligned `addr` uses partial lanes on the first beat; no burst crosses 4 KiB |
+| `OVIP_AXI_BURST_FIXED` | a packet into, or out of, one data register at `addr` | beat k carries bytes k·size.. of the packet (fewer when `addr` is unaligned); at most 16 beats per burst |
+
+On a write `strb` holds one bit per byte (all on by default); a byte with its
+strobe off is not written. On an AXI4-Lite port every burst is one beat of the
+bus width whatever `size` and `max_len` say. WRAP is refused.
+
+```systemverilog
+ovip_axi_bytestream_sequence wr = ovip_axi_bytestream_sequence::type_id::create("wr");
+wr.addr = 'h1003; wr.max_len = 7;               // bursts of up to 8 beats of the bus width
+repeat(500) wr.data.push_back($urandom);
+wr.start(master_agent.sqr);
+if(!wr.all_okay()) `uvm_error("WR", wr.worst_resp().name())
+
+ovip_axi_bytestream_sequence rd = ovip_axi_bytestream_sequence::type_id::create("rd");
+rd.tr_type = OVIP_AXI_READ_TRANS; rd.addr = 'h1003; rd.read_size = 500;
+rd.start(master_agent.sqr);
+// rd.data holds the bytes; rd.trans[i].resp_beats the RRESP of every beat of burst i
+```
+
+After `start` returns, `trans[$]` holds the bursts in order as the driver put
+them back: `resp` (BRESP, or the worst RRESP of the burst), `resp_beats` on a
+read, `len` and `addr` as sent. `ovip_axi_bytestream_test` is the proof, on a
+random bus width and alignment mode per seed, and
+`ovip_axi_bytestream_lite_test` on AXI4-Lite.
+
 ### Slave sequences (zero-time response rule)
 
 The slave driver pulls one item at a time from the slave sequence via the **response/request port** and immediately uses it to drive the bus:

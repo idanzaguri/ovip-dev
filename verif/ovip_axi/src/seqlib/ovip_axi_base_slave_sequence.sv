@@ -196,35 +196,23 @@ class ovip_axi_base_slave_sequence extends uvm_sequence#(ovip_axi_trans);
 	endfunction : write_wrap_burst_transaction_to_mem
 
 
+	// FIXED: every beat lands on the same bytes, at tr.addr and its byte
+	// lanes, so each beat is written as a single-beat INCR burst there. The
+	// INCR path reshapes a beat wider than the memory word, so a FIXED beat
+	// may be any size up to the bus width.
 	function void write_fixed_burst_transaction_to_mem(ovip_axi_trans tr);
-		int burst_size = 1<<tr.size;
-		virt_mem_trans.addr = tr.addr - (tr.addr % memory_word_size); // aligned address to memory sturcture
-
-		if(burst_size > memory_word_size)
-			`uvm_fatal("OVIP_AXI/SLAVE_SEQ/MISSING_FEATURE",
-				$sformatf("write_transaction_to_mem: For FIXED bursts, the burst size (%0dB) must not exceed the memory line size (%0dB).",
-					burst_size, memory_word_size))
-
-		if(p_sequencer.cfg.auto_byte_lanes_alignment)
+		ovip_axi_trans beat = ovip_axi_trans::type_id::create("fixed_beat");
+		beat.tr_type   = OVIP_AXI_WRITE_TRANS;
+		beat.burst     = OVIP_AXI_BURST_INCR;
+		beat.addr      = tr.addr;
+		beat.size      = tr.size;
+		beat.len       = 0;
+		beat.bus_width = tr.bus_width;
+		foreach(tr.data_beats[ii])
 		begin
-			int unalignment = tr.addr % burst_size;
-			foreach(tr.data_beats[ii])
-			begin
-				ovip_axi_data_t wdata = tr.data_beats[ii] << unalignment*8;
-				ovip_axi_strb_t wstrb = tr.strb_beats[ii] << unalignment;
-				mem.write(virt_mem_trans.addr, wdata, wstrb);
-			end
-		end
-		else
-		begin
-			int byte_lane_offset = (tr.addr%tr.bus_width) & ~(burst_size-1);
-			foreach(tr.data_beats[ii])
-			begin
-				ovip_axi_data_t wdata = tr.data_beats[ii] >> byte_lane_offset*8;
-				ovip_axi_strb_t wstrb = tr.strb_beats[ii] >> byte_lane_offset;
-				mem.write(virt_mem_trans.addr, wdata, wstrb);
-			end
-		
+			beat.data_beats = {tr.data_beats[ii]};
+			beat.strb_beats = {tr.strb_beats[ii]};
+			write_incr_burst_transaction_to_mem(beat);
 		end
 	endfunction : write_fixed_burst_transaction_to_mem
 
@@ -246,7 +234,7 @@ class ovip_axi_base_slave_sequence extends uvm_sequence#(ovip_axi_trans);
 	endfunction : request_in_range
 
 
-	task write_transaction_to_mem(ovip_axi_trans tr);
+	virtual task write_transaction_to_mem(ovip_axi_trans tr);
 		if(mem == null)
 			`uvm_fatal("OVIP_AXI/SLAVE_SEQ",
 				"write_transaction_to_mem called with `mem == null`. Either assign `mem` before start(), or override write_transaction_to_mem in your subclass.")
@@ -277,41 +265,24 @@ class ovip_axi_base_slave_sequence extends uvm_sequence#(ovip_axi_trans);
 	endtask : write_transaction_to_mem
 
 
-	// FIXED bursts re-read the same memory address for every beat. The beat
-	// data lives somewhere inside the memory word starting at addr - addr%word;
-	// we read the word, shift+mask down to the active byte range, then shift
-	// up into the byte lane the master will drive (when auto-alignment is off).
-	// Precondition: burst_size <= memory_word_size (one beat fits in one word).
+	// FIXED: every beat reads the same bytes, at tr.addr and its byte lanes,
+	// so each beat is one single-beat INCR read there. The memory is read
+	// once per beat, on purpose: a FIFO-backed memory model pops per beat.
+	// The INCR path reshapes a beat wider than the memory word.
 	task populate_data_from_mem_fixed(ovip_axi_trans tr);
-		int burst_size       = 1 << tr.size;
-		int unalignment      = tr.addr % memory_word_size;
-		ovip_axi_addr_t memory_addr = tr.addr - unalignment;
-		int num_byte_per_transfer = burst_size - (tr.addr % burst_size);
-		ovip_axi_data_t rdata_mask = (ovip_axi_data_t'(1) << (num_byte_per_transfer * 8)) - 1;
-		int unsigned byte_lane_offset_bits = 0;
-
-		if(burst_size > memory_word_size)
-			`uvm_fatal("OVIP_AXI/SLAVE_SEQ/MISSING_FEATURE",
-				$sformatf("populate_data_from_mem: For FIXED bursts, the burst size (%0dB) cannot exceed the memory line size (%0dB)",
-					burst_size, memory_word_size))
-
-		// With auto-alignment off the user expects rdata to arrive in the
-		// byte lane the master is actually driving on the bus. With auto-
-		// alignment on the byte-lane shift is applied later (by the driver).
-		if(!p_sequencer.cfg.auto_byte_lanes_alignment)
+		ovip_axi_trans beat = ovip_axi_trans::type_id::create("fixed_beat");
+		beat.tr_type   = OVIP_AXI_READ_TRANS;
+		beat.burst     = OVIP_AXI_BURST_INCR;
+		beat.addr      = tr.addr;
+		beat.size      = tr.size;
+		beat.len       = 0;
+		beat.bus_width = tr.bus_width;
+		tr.data_beats = {};
+		repeat(tr.len + 1)
 		begin
-			int unsigned lane = (tr.addr % tr.bus_width) & ~(burst_size - 1);
-			lane += tr.addr % burst_size;
-			byte_lane_offset_bits = lane * 8;
-		end
-
-		for(int ii = 0; ii <= tr.len; ii++)
-		begin
-			ovip_axi_data_t rdata = mem.read(memory_addr);
-			rdata >>= unalignment * 8;       // drop bytes below the start of the beat
-			rdata &= rdata_mask;             // mask bytes above the active range
-			rdata <<= byte_lane_offset_bits; // place into the bus byte lane
-			tr.data_beats.push_back(rdata);
+			beat.data_beats = {};
+			populate_data_from_mem_incr(beat);
+			tr.data_beats.push_back(beat.data_beats[0]);
 		end
 	endtask : populate_data_from_mem_fixed
 
@@ -410,7 +381,7 @@ class ovip_axi_base_slave_sequence extends uvm_sequence#(ovip_axi_trans);
 	endtask : populate_data_from_mem_wrap
 
 
-	task populate_data_from_mem(ovip_axi_trans tr);
+	virtual task populate_data_from_mem(ovip_axi_trans tr);
 		if(mem == null)
 			`uvm_fatal("OVIP_AXI/SLAVE_SEQ",
 				"populate_data_from_mem called with `mem == null`. Either assign `mem` before start(), or override populate_data_from_mem in your subclass.")

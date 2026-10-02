@@ -32,6 +32,7 @@ package ovip_tests_pkg;
 	`include "ovip_axi_aux_signals_test.sv"
 	`include "ovip_axi_rresp_per_beat_test.sv"
 	`include "ovip_axi_slave_out_of_range_test.sv"
+	`include "ovip_axi_bytestream_test.sv"
 	`include "ovip_axi_mid_test_reset_test.sv"
 	`include "ovip_axi_mid_test_reset_inflight_test.sv"
 endpackage : ovip_tests_pkg
