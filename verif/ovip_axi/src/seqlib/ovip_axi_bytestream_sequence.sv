@@ -50,6 +50,15 @@ class ovip_axi_bytestream_sequence extends ovip_axi_base_master_sequence;
 	int max_data_delay = 0;
 	int max_addr_delay = 0;
 
+	// Where a write's data starts against its address (see the README's timing
+	// section), and with BEFORE_ADDR how long the address waits, random in
+	// [0, max] per burst. Ready patterns the master drives on R and B, applied
+	// to every burst when their `cycles` is not empty (empty keeps the driver's).
+	ovip_axi_data_start_event_t data_start_event = OVIP_AXI_DATA_START_EV_ADDR_DRIVEN;
+	int max_addr_phase_delay = 0;
+	ovip_axi_ready_pattern_t rready_pattern;
+	ovip_axi_ready_pattern_t bready_pattern;
+
 	// The bursts the stream split into, in order, as the driver put them back.
 	ovip_axi_trans trans[$];
 
@@ -269,9 +278,13 @@ class ovip_axi_bytestream_sequence extends ovip_axi_base_master_sequence;
 				initialize_axi_write_trans_with_data(tr);
 				if(max_data_delay > 0)
 					repeat(tr.len+1) tr.data_delay.push_back($urandom_range(max_data_delay, 0));
+				tr.data_start_event = data_start_event;
+				tr.addr_phase_delay = (max_addr_phase_delay > 0) ? $urandom_range(max_addr_phase_delay, 0) : 0;
 			end
 
 			tr.delay_until_next_addr = (max_addr_delay > 0) ? $urandom_range(max_addr_delay, 0) : 0;
+			if(rready_pattern.cycles.size()) tr.rready_pattern = rready_pattern;
+			if(bready_pattern.cycles.size()) tr.bready_pattern = bready_pattern;
 			finish_item(tr);
 		end
 

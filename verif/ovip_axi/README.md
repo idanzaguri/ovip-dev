@@ -389,6 +389,13 @@ rd.start(master_agent.sqr);
 // rd.data holds the bytes; rd.trans[i].resp_beats the RRESP of every beat of burst i
 ```
 
+Timing is per sequence and applies to every burst: `max_data_delay` (gaps
+between W beats), `max_addr_delay` (the gap before the next address),
+`data_start_event` with `max_addr_phase_delay` (where a write's data
+starts against its address, see Basic Timings), and `rready_pattern` and
+`bready_pattern` (the master's R and B stalls, when their `cycles` is not
+empty). The default is back to back with every ready high.
+
 After `start` returns, `trans[$]` holds the bursts in order as the driver put
 them back: `resp` (BRESP, or the worst RRESP of the burst), `resp_beats` on a
 read, `len` and `addr` as sent. `ovip_axi_bytestream_test` is the proof, on a

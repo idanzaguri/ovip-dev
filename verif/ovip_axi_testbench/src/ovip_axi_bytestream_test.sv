@@ -10,8 +10,11 @@
 //      beats it received, and the log is the packet. The memory holds the
 //      last beat.
 //   4. FIXED read from one address: the bytes there, repeated.
-// ovip_axi_bytestream_lite_test runs 1 and 2 on AXI4-Lite, where every burst
-// must be one beat of the bus width whatever the caller asked for.
+//   5. Four streams at once on the master with mixed timing, one with its data
+//      before its address: the W bursts must pair with the AWs in order and
+//      every stream's bytes must land where it wrote them.
+// ovip_axi_bytestream_lite_test runs 1, 2 and 5 on AXI4-Lite, where every
+// burst must be one beat of the bus width whatever the caller asked for.
 
 // A slave sequence that logs the strobed bytes of every FIXED beat per
 // address before it writes the memory: what a data register would receive.
@@ -105,6 +108,22 @@ class ovip_axi_bytestream_test extends ovip_axi_base_test;
 		return ovip_axi_addr_t'($urandom_range('hfff, 1)) << 12;
 	endfunction : window
 
+	// random timing on a sequence: write data before, with or after the address,
+	// gaps between beats and bursts, and R/B ready stalls, or none of it
+	function void random_timing(ovip_axi_bytestream_sequence seq);
+		if($urandom_range(2, 0) == 0) return;   // one in three stays back to back
+		seq.max_data_delay = $urandom_range(4, 0);
+		seq.max_addr_delay = $urandom_range(4, 0);
+		seq.max_addr_phase_delay = $urandom_range(3, 0);
+		case($urandom_range(2, 0))
+			0: seq.data_start_event = OVIP_AXI_DATA_START_EV_ADDR_DRIVEN;
+			1: seq.data_start_event = OVIP_AXI_DATA_START_EV_ADDR_SAMPLED;
+			2: seq.data_start_event = OVIP_AXI_DATA_START_EV_BEFORE_ADDR;
+		endcase
+		if($urandom_range(1, 0)) seq.rready_pattern = '{cycles:'{$urandom_range(3, 0), $urandom_range(3, 1)}, loop:1};
+		if($urandom_range(1, 0)) seq.bready_pattern = '{cycles:'{$urandom_range(3, 0), $urandom_range(3, 1)}, loop:1};
+	endfunction : random_timing
+
 	// the bursts the sequence made: under the cap, Lite one beat of the bus width
 	function void check_bursts(ovip_axi_bytestream_sequence seq, int cap, string what);
 		int bus = int'(master_cfg.bus_width);
@@ -150,6 +169,7 @@ class ovip_axi_bytestream_test extends ovip_axi_base_test;
 		wr.tr_type = OVIP_AXI_WRITE_TRANS;
 		wr.addr = addr; wr.size = size; wr.max_len = cap;
 		wr.data = data; wr.strb = strb;
+		random_timing(wr);
 		wr.start(master_agent.sqr);
 		check_bursts(wr, cap, {what, " write"});
 		after = mem.read_bytestream(addr, n);
@@ -158,6 +178,7 @@ class ovip_axi_bytestream_test extends ovip_axi_base_test;
 		rd = ovip_axi_bytestream_sequence::type_id::create("rd");
 		rd.tr_type = OVIP_AXI_READ_TRANS;
 		rd.addr = addr; rd.size = size; rd.max_len = cap; rd.read_size = n;
+		random_timing(rd);
 		rd.start(master_agent.sqr);
 		check_bursts(rd, cap, {what, " read"});
 		expect_ok(rd.data.size() == n, $sformatf("%s read: %0d bytes came back", what, rd.data.size()));
@@ -183,6 +204,7 @@ class ovip_axi_bytestream_test extends ovip_axi_base_test;
 		seq.tr_type = OVIP_AXI_WRITE_TRANS;
 		seq.burst = OVIP_AXI_BURST_FIXED;
 		seq.addr = addr; seq.size = size; seq.max_len = cap; seq.data = packet;
+		random_timing(seq);
 		seq.start(master_agent.sqr);
 		check_bursts(seq, (cap < 0) ? 15 : cap, what);
 
@@ -216,10 +238,49 @@ class ovip_axi_bytestream_test extends ovip_axi_base_test;
 		seq.tr_type = OVIP_AXI_READ_TRANS;
 		seq.burst = OVIP_AXI_BURST_FIXED;
 		seq.addr = addr; seq.size = size; seq.read_size = n;
+		random_timing(seq);
 		seq.start(master_agent.sqr);
 		check_bursts(seq, 15, what);
 		expect_ok(seq.data == expected, $sformatf("%s: data\n  expected %s\n  got      %s", what, bs2string(expected), bs2string(seq.data)));
 	endtask : fixed_read_round
+
+	// 5: four streams at once on the one master, each with its own timing, so
+	// a write whose data starts before its address runs beside writes whose
+	// data follows the address: the W bursts must still pair with the AWs in
+	// order, which the monitor's strobe and WLAST checks watch, and every
+	// stream's bytes must land where it wrote them
+	task concurrent_round(int round);
+		int bus = int'(master_cfg.bus_width);
+		ovip_axi_addr_t base = window();
+		ovip_bytestream data[4], after;
+		string what = $sformatf("concurrent round %0d at 0x%0x", round, base);
+		foreach(data[k]) repeat($urandom_range(300, 8)) data[k].push_back($urandom);
+		begin
+			for(int k = 0; k < 4; k++)
+			begin
+				automatic int kk = k;
+				fork
+					begin
+						ovip_axi_bytestream_sequence wr = ovip_axi_bytestream_sequence::type_id::create($sformatf("wr%0d", kk));
+						wr.tr_type = OVIP_AXI_WRITE_TRANS;
+						wr.addr = base + kk * 'h400 + (lite ? 0 : $urandom_range(7, 0));
+						wr.size = lite ? $clog2(bus) : $urandom_range($clog2(bus), 0);
+						wr.max_len = lite ? 0 : $urandom_range(15, 0);
+						wr.id = lite ? 0 : kk;
+						wr.data = data[kk];
+						random_timing(wr);
+						if(kk == 0 && !lite) wr.data_start_event = OVIP_AXI_DATA_START_EV_BEFORE_ADDR;   // at least one of each kind
+						if(kk == 1) wr.data_start_event = OVIP_AXI_DATA_START_EV_ADDR_DRIVEN;
+						wr.start(master_agent.sqr);
+						check_bursts(wr, lite ? 0 : 15, $sformatf("%s stream %0d", what, kk));
+						after = mem.read_bytestream(wr.addr, data[kk].size());
+						expect_ok(after == data[kk], $sformatf("%s stream %0d: memory\n  expected %s\n  got      %s", what, kk, bs2string(data[kk]), bs2string(after)));
+					end
+				join_none
+			end
+			wait fork;   // every stream done, responses included
+		end
+	endtask : concurrent_round
 
 	task main_phase(uvm_phase phase);
 		super.main_phase(phase);
@@ -232,6 +293,7 @@ class ovip_axi_bytestream_test extends ovip_axi_base_test;
 			for(int r = 0; r < 3; r++) fixed_write_round(r);
 			for(int r = 0; r < 3; r++) fixed_read_round(r);
 		end
+		for(int r = 0; r < 3; r++) concurrent_round(r);
 		#100ns;
 		`uvm_info("BYTESTREAM", $sformatf("%0d expect_ok(s) passed", checks), UVM_LOW)
 		phase.drop_objection(this);

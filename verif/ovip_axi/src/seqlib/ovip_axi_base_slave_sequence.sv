@@ -158,40 +158,33 @@ class ovip_axi_base_slave_sequence extends uvm_sequence#(ovip_axi_trans);
 	endfunction : write_incr_burst_transaction_to_mem
 
 
-	// WRAP: each beat goes to a different memory address inside the wrap
-	// window, and the address wraps when it crosses the upper boundary.
-	// Precondition: burst_size <= memory_word_size (one beat fits one word).
+	// WRAP: each beat lands on its own container inside the wrap window, the
+	// address wrapping at the window's top, so each beat is written as a
+	// single-beat INCR burst at that address. The INCR path reshapes a beat
+	// wider than the memory word, so a WRAP beat may be any size up to the
+	// bus width.
 	function void write_wrap_burst_transaction_to_mem(ovip_axi_trans tr);
 		int burst_size = 1 << tr.size;
 		int total_size = burst_size * (tr.len + 1);
 		ovip_axi_addr_t wrap_low = tr.addr & ~(total_size - 1);
-
-		if(burst_size > memory_word_size)
-			`uvm_fatal("OVIP_AXI/SLAVE_SEQ/MISSING_FEATURE",
-				$sformatf("write_transaction_to_mem: For WRAP bursts, the burst size (%0dB) must not exceed the memory line size (%0dB).",
-					burst_size, memory_word_size))
-
+		ovip_axi_trans beat = ovip_axi_trans::type_id::create("wrap_beat");
+		beat.tr_type   = OVIP_AXI_WRITE_TRANS;
+		beat.burst     = OVIP_AXI_BURST_INCR;
+		beat.size      = tr.size;
+		beat.len       = 0;
+		beat.bus_width = tr.bus_width;
 		for(int ii = 0; ii <= tr.len; ii++)
 		begin
-			ovip_axi_addr_t beat_addr = wrap_low + ((tr.addr - wrap_low + ii*burst_size) % total_size);
-			ovip_axi_addr_t mem_addr  = beat_addr - (beat_addr % memory_word_size);
-			int unsigned    word_lane = beat_addr % memory_word_size;
-			ovip_axi_data_t wdata;
-			ovip_axi_strb_t wstrb;
-
-			if(p_sequencer.cfg.auto_byte_lanes_alignment)
+			beat.addr       = wrap_low + ((tr.addr - wrap_low + ii*burst_size) % total_size);
+			beat.data_beats = {tr.data_beats[ii]};
+			beat.strb_beats = {tr.strb_beats[ii]};
+			if(p_sequencer.cfg.auto_byte_lanes_alignment && ii > 0)
 			begin
-				wdata = tr.data_beats[ii] << (word_lane * 8);
-				wstrb = tr.strb_beats[ii] << word_lane;
+				// under auto alignment the master right-justified every beat to its own
+				// lane; the INCR path expects a single beat right-justified to its address
+				// lane, which it is, so nothing to shift
 			end
-			else
-			begin
-				int unsigned bus_lane = beat_addr % tr.bus_width;
-				wdata = (tr.data_beats[ii] >> (bus_lane * 8)) << (word_lane * 8);
-				wstrb = (tr.strb_beats[ii] >> bus_lane) << word_lane;
-			end
-
-			mem.write(mem_addr, wdata, wstrb);
+			write_incr_burst_transaction_to_mem(beat);
 		end
 	endfunction : write_wrap_burst_transaction_to_mem
 
@@ -343,40 +336,27 @@ class ovip_axi_base_slave_sequence extends uvm_sequence#(ovip_axi_trans);
 	endtask : populate_data_from_mem_incr
 
 
-	// WRAP bursts walk memory beat by beat, with the address wrapping when it
-	// crosses the upper boundary of the wrap window (`[wrap_low, wrap_low +
-	// total_size)`). Read one memory word per beat, extract the burst_size
-	// bytes at the beat's offset within the word, and place into the lane the
-	// driver/master expects (lane 0 with auto-alignment, the bus byte lane
-	// otherwise). Precondition: burst_size <= memory_word_size.
+	// WRAP: each beat reads its own container inside the wrap window, the
+	// address wrapping at the window's top, so each beat is one single-beat
+	// INCR read at that address. The INCR path reshapes a beat wider than the
+	// memory word and places it as the driver expects.
 	task populate_data_from_mem_wrap(ovip_axi_trans tr);
 		int burst_size = 1 << tr.size;
 		int total_size = burst_size * (tr.len + 1);
 		ovip_axi_addr_t wrap_low = tr.addr & ~(total_size - 1);
-		ovip_axi_data_t rdata_mask = (ovip_axi_data_t'(1) << (burst_size * 8)) - 1;
-
-		if(burst_size > memory_word_size)
-			`uvm_fatal("OVIP_AXI/SLAVE_SEQ/MISSING_FEATURE",
-				$sformatf("populate_data_from_mem: For WRAP bursts, the burst size (%0dB) cannot exceed the memory line size (%0dB)",
-					burst_size, memory_word_size))
-
+		ovip_axi_trans beat = ovip_axi_trans::type_id::create("wrap_beat");
+		beat.tr_type   = OVIP_AXI_READ_TRANS;
+		beat.burst     = OVIP_AXI_BURST_INCR;
+		beat.size      = tr.size;
+		beat.len       = 0;
+		beat.bus_width = tr.bus_width;
+		tr.data_beats = {};
 		for(int ii = 0; ii <= tr.len; ii++)
 		begin
-			ovip_axi_addr_t beat_addr = wrap_low + ((tr.addr - wrap_low + ii*burst_size) % total_size);
-			ovip_axi_addr_t mem_addr  = beat_addr - (beat_addr % memory_word_size);
-			int unsigned    word_lane = beat_addr % memory_word_size;
-			ovip_axi_data_t rdata     = mem.read(mem_addr);
-
-			rdata >>= word_lane * 8;     // drop bytes below the beat's start in the word
-			rdata &= rdata_mask;         // keep only burst_size bytes
-
-			if(!p_sequencer.cfg.auto_byte_lanes_alignment)
-			begin
-				int unsigned bus_lane = beat_addr % tr.bus_width;
-				rdata <<= bus_lane * 8;
-			end
-
-			tr.data_beats.push_back(rdata);
+			beat.addr       = wrap_low + ((tr.addr - wrap_low + ii*burst_size) % total_size);
+			beat.data_beats = {};
+			populate_data_from_mem_incr(beat);
+			tr.data_beats.push_back(beat.data_beats[0]);
 		end
 	endtask : populate_data_from_mem_wrap
 

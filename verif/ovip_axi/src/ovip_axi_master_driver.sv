@@ -443,9 +443,12 @@ task ovip_axi_master_driver::waddr_phase_driver();
 			tr = pending_tr_with_data_before_addr.pop_front();
 			pending_tr_with_data_before_addr_delay.delete(0);
 		end
-		else if(pending_wr_tr.size() == 0)
+		else if(pending_wr_tr.size() == 0 || pending_tr_with_data_before_addr.size())
 		begin
-			// If there are no ready transactions, wait one cycle and then continue.
+			// Nothing ready, or a data-before-address write is parked with its AW
+			// still to come: no later AW may overtake it. Its W beats are already
+			// queued in order, and AXI pairs W bursts with AWs in order, so an
+			// AW issued ahead of it would get that write's data. Wait a cycle.
 			@(vif.master_cb);
 			continue;
 		end

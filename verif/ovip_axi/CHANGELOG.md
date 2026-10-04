@@ -41,7 +41,11 @@ breaks are called out explicitly in their changelog entry.
   extends `ovip_axi_base_master_sequence`, so the response queue is
   unbounded (it was 100 deep; a stream of more bursts lost responses). The
   INCR split now cuts on the 4 KiB distance, so a cap that is not a power
-  of two works. `ovip_axi_bytestream_test` (random bus width and alignment
+  of two works. Timing per burst too: `data_start_event` and
+  `max_addr_phase_delay` (where a write's data starts against its
+  address), and `rready_pattern` / `bready_pattern` applied to every burst
+  when set, beside the existing `max_data_delay` and `max_addr_delay`; the
+  test drives them at random. `ovip_axi_bytestream_test` (random bus width and alignment
   per seed: strobe holes, caps, FIXED both ways against a slave that logs
   the beats) and `ovip_axi_bytestream_lite_test` are the proof.
 - `ovip_axi_base_slave_sequence` writes and reads a FIXED burst through its
@@ -51,6 +55,17 @@ breaks are called out explicitly in their changelog entry.
 
 ### Fixed -- VIP
 
+- The master driver no longer lets a later write's AW overtake a parked
+  data-before-address write: while such a write waits for its AW, no other
+  AW is issued. Its W beats were already queued in order, and AXI pairs W
+  bursts with AWs in order, so the overtaking AW took that write's data
+  (the monitor reported INVALID_WSTRB or a missing WLAST, and a slave
+  wrote one write's bytes at the other's address). It showed with several
+  writes in flight whose `data_start_event` differed. The bytestream test's
+  concurrent round is the proof.
+- `ovip_axi_base_slave_sequence` writes and reads a WRAP burst through its
+  INCR path one beat at a time, like FIXED, so a WRAP beat may be wider
+  than the memory word (it was refused with `MISSING_FEATURE`).
 - `ovip_axi_base_slave_sequence::write_transaction_to_mem` and
   `populate_data_from_mem` are virtual now, as their comments promised: a
   subclass that overrides them was not called from the base body.
