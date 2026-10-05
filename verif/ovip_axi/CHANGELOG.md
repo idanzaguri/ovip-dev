@@ -9,6 +9,21 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+### Fixed -- VIP
+
+- The monitor's stability checks took a reset under VALID as "xVALID was
+  de-asserted before the transfer was sampled", and as a payload "changed
+  before being sampled", when the other side dropped VALID with the reset,
+  as an asynchronously reset slave or master does. The check thread and
+  `rst_monitor` wake on that edge in either order. Each check now ends the
+  transfer on an edge where ARESETn is low. Found by logion_tb's reset test
+  on a NoC's master port.
+
+### Added -- testbench
+
+- `ovip_axi_mid_test_reset_async_valid_test`: a reset while an R beat waits
+  for RREADY, RVALID dropped with it, then traffic after the release.
+
 ## [0.4.0] -- 2026-10-05
 
 ### Added -- VIP
