@@ -22,6 +22,7 @@ package ovip_tests_pkg;
 	`include "ovip_axi_unstrobed_wdata_test.sv"
 	`include "ovip_axi_unused_rdata_test.sv"
 	`include "ovip_axi_idle_payload_test.sv"
+	`include "ovip_axi_awready_waits_for_wvalid_test.sv"
 	`include "ovip_axi_bad_dba_test.sv"
 	`include "ovip_axi_xz_test.sv"
 	`include "ovip_axi_signal_stability_test.sv"

@@ -80,6 +80,13 @@ class ovip_axi_agent_config extends uvm_object;
 	// handshake then shows it. Off by default.
 	bit randomize_idle_payload = 0;
 
+	// Slave only. AXI lets a slave wait for WVALID before it asserts AWREADY.
+	// When set, AWREADY follows its ready pattern only while a write burst has
+	// offered WVALID ahead of its AW: WVALID high now, or W beats the slave
+	// took before the AW. A master that waits for AWREADY before WVALID, which
+	// AXI forbids, then hangs. Read at the start of the run. Off by default.
+	bit awready_waits_for_wvalid = 0;
+
 	// When set, suppress the "delayed slave sequence" warning. Enable this if the
 	// slave sequence intentionally consumes simulation time before responding.
 	bit suppress_delayed_slave_seq_warning = 0;

@@ -102,10 +102,10 @@ A few open items that are well-scoped for a new contributor:
      `cfg.randomize_idle_payload` (the README's "Payload while VALID is
      low"). It exposes an interface that takes a field before its handshake,
      such as BRESP while BVALID is low (FV-5).
-  4. **Slave: AWREADY only while WVALID is high** (`waddr_phase_driver`), which
-     AXI allows a slave. It exposes a master that waits for AWREADY before
-     WVALID: FV-3's slave NIs, and OVIP's own `DATA_START_EV_ADDR_SAMPLED`
-     (logion_tb TB-3). Such a master hangs, so a watchdog or the transaction
-     timeout reports it.
+  4. **Slave: AWREADY only once WVALID has shown**: done, as
+     `cfg.awready_waits_for_wvalid` (the README's "A slave that waits for
+     WVALID"). It exposes a master that waits for AWREADY before WVALID:
+     FV-3's slave NIs, and OVIP's own `DATA_START_EV_ADDR_SAMPLED`. Such a
+     master hangs, so a watchdog or the transaction timeout reports it.
 See [CHANGELOG.md](CHANGELOG.md) "Known limitations" for the full list of
 gaps tracked against this release.

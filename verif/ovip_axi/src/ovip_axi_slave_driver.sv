@@ -55,6 +55,7 @@ class ovip_axi_slave_driver #(type IF_T = virtual ovip_axi_agent_if) extends ovi
 
 	extern virtual function void drive_reset_values();
 	extern virtual function ovip_axi_data_t idle_value(int bits = 64);
+	extern virtual task awready_after_wvalid_driver();
 
 	extern virtual function void drive_r_channel_reset_values();
 	extern virtual function void drive_b_channel_reset_values();
@@ -153,6 +154,11 @@ endtask : raddr_phase_driver
 
 task ovip_axi_slave_driver::waddr_phase_driver();
 	ovip_axi_ready_pattern_t ready_pattern = cfg.default_awready_pattern;
+	if(cfg.awready_waits_for_wvalid)
+	begin
+		awready_after_wvalid_driver();
+		return;
+	end
 	forever begin
 		if(ready_pattern.cycles.sum() == 0) begin
 			`uvm_warning("OVIP_AXI/READY_PATTERN", "awready pattern cycles[] sum to 0 -- falling back to '{cycles:'{0,1}, loop:0} (always-ready)")
@@ -173,6 +179,50 @@ task ovip_axi_slave_driver::waddr_phase_driver();
 	end
 endtask : waddr_phase_driver
 
+
+// cfg.awready_waits_for_wvalid: AWREADY follows the ready pattern, but only
+// while some write burst has offered WVALID ahead of its AW. The slave still
+// takes W whenever WREADY allows, so a burst whose W it took before the AW
+// counts as well. One loop per cycle: it counts, then drives.
+task ovip_axi_slave_driver::awready_after_wvalid_driver();
+	ovip_axi_ready_pattern_t ready_pattern = cfg.default_awready_pattern;
+	ovip_axi_ready_pattern_t next_pattern;
+	int  w_ahead  = 0;   // W bursts that offered WVALID and whose AW the slave has not taken
+	bit  in_burst = 0;   // a W burst has started and its last beat is not taken yet
+	bit  lite     = (cfg.protocol_type == OVIP_PROTOCOL_AXI4_LITE);
+	int  ii       = 0;   // the pattern's current entry: even entries low, odd ones high
+	int  left;           // cycles left in it
+	bit  held     = 0;   // a pattern that does not loop has ended: its last entry holds
+	if(ready_pattern.cycles.sum() == 0) ready_pattern = '{cycles:'{0,1}, loop:0};
+	left = ready_pattern.cycles[0];
+	vif.slave_cb.awready <= 0;
+	forever
+	begin
+		@(vif.monitor_cb);
+		// what this edge saw
+		if(vif.monitor_cb.wvalid && !in_burst) begin w_ahead++; in_burst = 1; end
+		if(vif.monitor_cb.wvalid && vif.monitor_cb.wready && (lite || vif.monitor_cb.wlast)) in_burst = 0;
+		if(vif.monitor_cb.awvalid && vif.monitor_cb.awready) w_ahead--;
+		// a new pattern replaces the current one
+		if(awready_pattern_mb.try_get(next_pattern) && next_pattern.cycles.sum() != 0)
+		begin
+			ready_pattern = next_pattern;
+			ii = 0;
+			left = ready_pattern.cycles[0];
+			held = 0;
+		end
+		// step the pattern by one cycle
+		while(!held && left == 0)
+		begin
+			if(ii + 1 < ready_pattern.cycles.size()) ii++;
+			else if(ready_pattern.loop) ii = 0;
+			else begin held = 1; break; end
+			left = ready_pattern.cycles[ii];
+		end
+		if(!held) left--;
+		vif.slave_cb.awready <= bit'(ii) && (w_ahead > 0);
+	end
+endtask : awready_after_wvalid_driver
 
 task ovip_axi_slave_driver::wdata_phase_driver();
 	ovip_axi_ready_pattern_t ready_pattern = cfg.default_wready_pattern;

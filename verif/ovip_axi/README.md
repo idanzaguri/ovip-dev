@@ -176,6 +176,12 @@ AXI leaves a channel's payload undefined while its VALID is low. By default the 
 
 `cfg.randomize_idle_payload = 1` (master and slave, default `0`) puts random values there instead: on AW, W and AR at a master, and on B and R at a slave. It works with or without `drive_reset_values_when_idle`. An interface that takes a field before its handshake then shows it, for example a NoC interface that takes BRESP while BVALID is low (logion_formal FV-5). `ovip_axi_idle_payload_test` checks it: the data still round-trips, and each of the five channels shows a non-zero payload while its VALID is low.
 
+### A slave that waits for WVALID
+
+AXI lets a slave wait for WVALID before it asserts AWREADY, and forbids a master to wait for AWREADY before it asserts WVALID. By default OVIP's slave drives AWREADY from its ready pattern alone, so it never waits for WVALID.
+
+`cfg.awready_waits_for_wvalid = 1` (slave only, default `0`, read at the start of the run) makes AWREADY follow the pattern only while a write burst has offered WVALID ahead of its AW. That counts WVALID high now, or W beats the slave already took before the AW. A master that waits for AWREADY before WVALID then hangs, for example a NoC slave NI that holds the write header until the AW handshake (logion_formal FV-3), or this VIP's own `DATA_START_EV_ADDR_SAMPLED`. `ovip_axi_awready_waits_for_wvalid_test` checks it: the data round-trips, the slave never takes an AW before its burst offered WVALID, and some AW waits for its W.
+
 ## Ready Patterns
 
 The level driven on a `ready` signal (`awready`/`wready`/`arready` on the slave side, `rready`/`bready` on the master side) is controlled by a *ready pattern* (`ovip_axi_ready_pattern_t`), a small struct with two fields:
