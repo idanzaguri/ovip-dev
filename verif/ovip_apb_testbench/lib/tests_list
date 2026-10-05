@@ -1,4 +1,5 @@
 ovip_apb_error_response_test
+ovip_apb_mid_test_reset_test
 ovip_apb_slave_out_of_range_test
 ovip_apb_smoke_test
 ovip_apb_strobe_test
