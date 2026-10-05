@@ -123,6 +123,8 @@ The delay between the address phase and the first data beat can be controlled wi
 2. **DATA_START_EV_ADDR_SAMPLED**:
    Similar to `DATA_START_EV_ADDR_DRIVEN`, but in this case, `data_delay[0]` is counted from address phase sampling (`awvalid & awready`).
 
+   So WVALID waits for AWREADY. AXI forbids that of a master: "the master must not wait for the slave to assert AWREADY or WREADY before asserting AWVALID or WVALID". It lets a slave wait for WVALID before it asserts AWREADY. Against such a slave the master and the slave wait for each other, and the simulation hangs with no message. Use this event only against a slave that asserts AWREADY without WVALID. A NoC master NI that puts the header and the first data beat in one flit waits for WVALID (logion_tb TB-3).
+
 ![data_start_ev_addr_sampled](wavedrom/data_start_ev_addr_sampled.svg)
 
 3. **DATA_START_EV_BEFORE_ADDR**:
