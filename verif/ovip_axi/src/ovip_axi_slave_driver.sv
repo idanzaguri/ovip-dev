@@ -236,10 +236,29 @@ endfunction : drive_r_channel_reset_values
 
 
 function void ovip_axi_slave_driver::drive_rd_channel(ovip_axi_trans tr);
+	ovip_axi_data_t rdata;
 	if(cfg.auto_byte_lanes_alignment && (tr.is_narrow_transfer || tr.burst_index == 0 || tr.burst == OVIP_AXI_BURST_FIXED))
-		vif.slave_cb.rdata <= tr.data_beats[tr.burst_index]<<tr.transfer_starting_byte_lane[tr.burst_index]*8;
+		rdata = tr.data_beats[tr.burst_index]<<tr.transfer_starting_byte_lane[tr.burst_index]*8;
 	else
-		vif.slave_cb.rdata <= tr.data_beats[tr.burst_index];
+		rdata = tr.data_beats[tr.burst_index];
+
+	// A lane the beat does not use is undefined in AXI: random instead of zero
+	// when asked. A beat uses its container from its first byte to its end.
+	if(cfg.randomize_unused_rdata && cfg.protocol_type != OVIP_PROTOCOL_AXI4_LITE)
+	begin
+		int s = 1 << tr.size;
+		int lo, hi;
+		if(tr.transfer_starting_byte_lane.size() != tr.len + 1)
+		begin
+			tr.bus_width = cfg.bus_width;
+			tr.calculate_transfer_starting_byte_lane();
+		end
+		lo = tr.transfer_starting_byte_lane[tr.burst_index];
+		hi = (lo & ~(s - 1)) + s;
+		for(int ii = 0; ii < int'(cfg.bus_width); ii++)
+			if(ii < lo || ii >= hi) rdata[ii*8 +: 8] = $urandom;
+	end
+	vif.slave_cb.rdata <= rdata;
 
 	if(cfg.rd_id_width) vif.slave_cb.rid   <= tr.id;
 	if(cfg.ruser_width) vif.slave_cb.ruser <= tr.ruser;

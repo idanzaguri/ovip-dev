@@ -164,6 +164,12 @@ AXI leaves a WDATA byte whose WSTRB bit is low undefined. By default the master 
 
 `cfg.randomize_unstrobed_wdata = 1` (master only, default `0`) puts a random value on every such byte instead. A slave or interconnect that uses those bytes then shows it, for example a write packer that ORs whole WDATA words into one flit (logion_formal FV-1). `ovip_axi_unstrobed_wdata_test` checks the switch: the memory takes the strobed bytes alone, and non-zero bytes appear under low strobes.
 
+### Lanes a read beat does not use
+
+AXI leaves an RDATA byte lane that a narrow or unaligned beat does not use undefined. By default the slave drives zero there. A beat uses its size-aligned container, from its first byte to the container's end.
+
+`cfg.randomize_unused_rdata = 1` (slave only, default `0`) puts a random value on every other lane instead. A master or interconnect that uses those lanes then shows it, for example a read packer that ORs whole RDATA words (logion_formal FV-6). An AXI-Lite read uses the whole bus, so the switch does nothing there. `ovip_axi_unused_rdata_test` and its `_no_auto_align` variant check it: the master gets the memory's bytes, and non-zero bytes appear outside each beat's bytes.
+
 ## Ready Patterns
 
 The level driven on a `ready` signal (`awready`/`wready`/`arready` on the slave side, `rready`/`bready` on the master side) is controlled by a *ready pattern* (`ovip_axi_ready_pattern_t`), a small struct with two fields:

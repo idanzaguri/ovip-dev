@@ -94,8 +94,9 @@ A few open items that are well-scoped for a new contributor:
      `cfg.randomize_unstrobed_wdata` (the README's "Bytes under a low
      strobe"). It exposes a write packer that ORs whole WDATA words into a
      flit (logion_formal FV-1).
-  2. **Slave: random RDATA bytes on the lanes a narrow beat does not use**
-     (`drive_rd_channel`). It exposes a read packer that ORs whole RDATA words
+  2. **Slave: random RDATA bytes on the lanes a narrow beat does not use**:
+     done, as `cfg.randomize_unused_rdata` (the README's "Lanes a read beat
+     does not use"). It exposes a read packer that ORs whole RDATA words
      (FV-6).
   3. **Random payload while VALID is low**, on AW, W and AR at a master and on
      B and R at a slave, in place of the `drive_*_reset_values` calls. It

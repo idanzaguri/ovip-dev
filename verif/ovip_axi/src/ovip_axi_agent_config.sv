@@ -66,6 +66,13 @@ class ovip_axi_agent_config extends uvm_object;
 	// that uses those bytes then shows it. Off by default.
 	bit randomize_unstrobed_wdata = 0;
 
+	// Slave only. AXI leaves an RDATA byte lane that a narrow or unaligned beat
+	// does not use undefined. When set, the driver puts a random value on every
+	// such lane instead of zero. A master or interconnect that uses those lanes
+	// then shows it. AXI-Lite reads use the whole bus, so it does nothing there.
+	// Off by default.
+	bit randomize_unused_rdata = 0;
+
 	// When set, suppress the "delayed slave sequence" warning. Enable this if the
 	// slave sequence intentionally consumes simulation time before responding.
 	bit suppress_delayed_slave_seq_warning = 0;
