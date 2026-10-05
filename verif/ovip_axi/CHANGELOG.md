@@ -9,6 +9,8 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+## [0.4.0] -- 2026-10-05
+
 ### Added -- VIP
 
 - `ovip_axi_trans.resp_beats[$]`: the RRESP of every beat of a read, in
@@ -39,7 +41,9 @@ breaks are called out explicitly in their changelog entry.
   the caller asked, and `trans[$]`, the bursts with their responses after
   `start` returns, summed up by `worst_resp()` and `all_okay()`. It now
   extends `ovip_axi_base_master_sequence`, so the response queue is
-  unbounded (it was 100 deep; a stream of more bursts lost responses). The
+  unbounded (it was 100 deep; a stream of more bursts lost responses) --
+  a base-class change, so a sequence that extends this one inherits a
+  different parent. The
   INCR split now cuts on the 4 KiB distance, so a cap that is not a power
   of two works. Timing per burst too: `data_start_event` and
   `max_addr_phase_delay` (where a write's data starts against its
@@ -52,6 +56,37 @@ breaks are called out explicitly in their changelog entry.
   INCR path one beat at a time, so a FIXED beat may be wider than the
   memory word (it was refused with `MISSING_FEATURE` above the word size,
   4 bytes by default).
+- Four switches that drive what AXI leaves undefined, so a DUT that relies
+  on OVIP's well-behaved default shows the bug instead of passing. Each is
+  off by default, so an agent that sets none behaves exactly as before. The
+  four, with the README section that describes each and the test that proves
+  it:
+  - `cfg.randomize_unstrobed_wdata` (master) -- a random value on every
+    WDATA byte whose WSTRB bit is low, inside or outside the beat's byte
+    window, instead of zero. It exposes a write packer that ORs whole WDATA
+    words into one flit. "Bytes under a low strobe";
+    `ovip_axi_unstrobed_wdata_test`.
+  - `cfg.randomize_unused_rdata` (slave) -- a random value on every RDATA
+    lane a narrow or unaligned beat does not use, instead of zero. A beat
+    uses its size-aligned container, so this is every lane outside it. It
+    exposes a read packer that ORs whole RDATA words. An AXI4-Lite read uses
+    the whole bus, so the switch does nothing there. "Lanes a read beat does
+    not use"; `ovip_axi_unused_rdata_test` and its `_no_auto_align` variant.
+  - `cfg.randomize_idle_payload` (master and slave) -- random values on a
+    channel's payload while its VALID is low (AW, W and AR at a master; B
+    and R at a slave), at reset and after every handshake, instead of zero
+    or the last value. It works with or without
+    `drive_reset_values_when_idle`. It exposes an interface that takes a
+    field before its handshake, such as one reading BRESP while BVALID is
+    low. "Payload while VALID is low"; `ovip_axi_idle_payload_test`.
+  - `cfg.awready_waits_for_wvalid` (slave, read at the start of the run) --
+    AWREADY follows its ready pattern only while a write burst has offered
+    WVALID ahead of its AW, counting WVALID high now or W beats the slave
+    already took. AXI permits this and forbids a master to wait for AWREADY
+    before WVALID, so such a master hangs and a watchdog or the transaction
+    timeout names it. That includes this VIP's own
+    `DATA_START_EV_ADDR_SAMPLED`. "A slave that waits for WVALID";
+    `ovip_axi_awready_waits_for_wvalid_test`.
 
 ### Fixed -- VIP
 

@@ -9,6 +9,8 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+## [0.2.0] -- 2026-10-05
+
 ### Added -- VIP
 
 - `ovip_apb_base_slave_sequence` answers PSLVERR to a transfer outside the

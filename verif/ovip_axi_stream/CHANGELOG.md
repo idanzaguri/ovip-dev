@@ -9,6 +9,8 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+## [0.1.2] -- 2026-10-05
+
 ### Fixed -- VIP
 
 - The monitor's checks and samples look at the configured width of each

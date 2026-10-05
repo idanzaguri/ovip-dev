@@ -8,6 +8,8 @@ and this package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.4.0] -- 2026-10-05
+
 ### Added
 
 - `ovip_mem_space` in `mem/ovip_mem_space.sv`: a memory built from
