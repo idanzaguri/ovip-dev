@@ -98,10 +98,10 @@ A few open items that are well-scoped for a new contributor:
      done, as `cfg.randomize_unused_rdata` (the README's "Lanes a read beat
      does not use"). It exposes a read packer that ORs whole RDATA words
      (FV-6).
-  3. **Random payload while VALID is low**, on AW, W and AR at a master and on
-     B and R at a slave, in place of the `drive_*_reset_values` calls. It
-     exposes an interface that takes a field before its handshake, such as
-     BRESP while BVALID is low (FV-5).
+  3. **Random payload while VALID is low**: done, as
+     `cfg.randomize_idle_payload` (the README's "Payload while VALID is
+     low"). It exposes an interface that takes a field before its handshake,
+     such as BRESP while BVALID is low (FV-5).
   4. **Slave: AWREADY only while WVALID is high** (`waddr_phase_driver`), which
      AXI allows a slave. It exposes a master that waits for AWREADY before
      WVALID: FV-3's slave NIs, and OVIP's own `DATA_START_EV_ADDR_SAMPLED`

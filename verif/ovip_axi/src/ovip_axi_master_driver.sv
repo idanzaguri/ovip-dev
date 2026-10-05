@@ -70,6 +70,7 @@ class ovip_axi_master_driver #(type IF_T = virtual ovip_axi_agent_if) extends ov
 
 	extern virtual function void reset_internal_state();
 	extern virtual function void drive_reset_values();
+	extern virtual function ovip_axi_data_t idle_value(int bits = 64);
 
 	// Tasks and functions for handling read channels.
 	extern virtual task raddr_phase_driver();
@@ -145,6 +146,16 @@ function void ovip_axi_master_driver::reset_internal_state();
 endfunction : reset_internal_state
 
 
+// A payload field's value while its VALID is low: zero, or random over `bits`
+// bits when cfg.randomize_idle_payload asks for it. AXI leaves it undefined.
+function ovip_axi_data_t ovip_axi_master_driver::idle_value(int bits = 64);
+	ovip_axi_data_t v = '0;
+	if(cfg.randomize_idle_payload)
+		for(int ii = 0; ii < bits && ii < $bits(v); ii += 32)
+			v[ii +: 32] = $urandom;
+	return v;
+endfunction : idle_value
+
 function void ovip_axi_master_driver::drive_reset_values();
 	vif.master_cb.arvalid <= 0;
 	vif.master_cb.awvalid <= 0;
@@ -159,20 +170,20 @@ endfunction : drive_reset_values
 // ----------------------------------------------------------------- //
 
 function void ovip_axi_master_driver::drive_ar_channel_reset_values();
-	vif.master_cb.araddr <= 0;
-	if(cfg.rd_id_width) vif.master_cb.arid <= 0;
-	if(cfg.arprot_en)   vif.master_cb.arprot <= 0;
+	vif.master_cb.araddr <= idle_value();
+	if(cfg.rd_id_width) vif.master_cb.arid <= idle_value();
+	if(cfg.arprot_en)   vif.master_cb.arprot <= idle_value();
 	if(cfg.protocol_type == OVIP_PROTOCOL_AXI4_LITE) return;
 
-	vif.master_cb.arlen   <= 0;
-	vif.master_cb.arsize  <= 0;
-	vif.master_cb.arburst <= 0;
+	vif.master_cb.arlen   <= idle_value();
+	vif.master_cb.arsize  <= idle_value();
+	vif.master_cb.arburst <= idle_value();
 
-	if(cfg.aruser_width) vif.master_cb.aruser   <= 0;
-	if(cfg.arlock_en)    vif.master_cb.arlock   <= 0;
-	if(cfg.arcache_en)   vif.master_cb.arcache  <= 0;
-	if(cfg.arqos_en)     vif.master_cb.arqos    <= 0;
-	if(cfg.arregion_en)  vif.master_cb.arregion <= 0;
+	if(cfg.aruser_width) vif.master_cb.aruser   <= idle_value();
+	if(cfg.arlock_en)    vif.master_cb.arlock   <= idle_value();
+	if(cfg.arcache_en)   vif.master_cb.arcache  <= idle_value();
+	if(cfg.arqos_en)     vif.master_cb.arqos    <= idle_value();
+	if(cfg.arregion_en)  vif.master_cb.arregion <= idle_value();
 
 endfunction : drive_ar_channel_reset_values
 
@@ -200,7 +211,7 @@ task ovip_axi_master_driver::raddr_phase_driver();
 	ovip_axi_trans tr;
 
 	vif.master_cb.arvalid <= 0;
-	if(cfg.drive_reset_values_when_idle)
+	if(cfg.drive_reset_values_when_idle || cfg.randomize_idle_payload)
 		drive_ar_channel_reset_values();
 
 	forever
@@ -214,7 +225,7 @@ task ovip_axi_master_driver::raddr_phase_driver();
 		@(vif.master_cb iff vif.master_cb.arready /*&& vif.monitor_cb.arvalid*/);
 		vif.master_cb.arvalid <= 0;
 
-		if(cfg.drive_reset_values_when_idle)
+		if(cfg.drive_reset_values_when_idle || cfg.randomize_idle_payload)
 			drive_ar_channel_reset_values();
 
 		tr.valid_address_phase = 1;
@@ -306,21 +317,21 @@ endtask : rdata_phase_driver
 // ----------------------------------------------------------------- //
 
 function void ovip_axi_master_driver::drive_aw_channel_reset_values();
-	vif.master_cb.awaddr <= 0;
-	if(cfg.awuser_width) vif.master_cb.awuser <= 0;
-	if(cfg.wr_id_width)  vif.master_cb.awid   <= 0;
-	if(cfg.awprot_en)    vif.master_cb.awprot <= 0;
+	vif.master_cb.awaddr <= idle_value();
+	if(cfg.awuser_width) vif.master_cb.awuser <= idle_value();
+	if(cfg.wr_id_width)  vif.master_cb.awid   <= idle_value();
+	if(cfg.awprot_en)    vif.master_cb.awprot <= idle_value();
 
 	if(cfg.protocol_type == OVIP_PROTOCOL_AXI4_LITE) return;
 
-	vif.master_cb.awlen   <= 0;
-	vif.master_cb.awsize  <= 0;
-	vif.master_cb.awburst <= 0;
+	vif.master_cb.awlen   <= idle_value();
+	vif.master_cb.awsize  <= idle_value();
+	vif.master_cb.awburst <= idle_value();
 
-	if(cfg.awlock_en)   vif.master_cb.awlock   <= 0;
-	if(cfg.awcache_en)  vif.master_cb.awcache  <= 0;
-	if(cfg.awqos_en)    vif.master_cb.awqos    <= 0;
-	if(cfg.awregion_en) vif.master_cb.awregion <= 0;
+	if(cfg.awlock_en)   vif.master_cb.awlock   <= idle_value();
+	if(cfg.awcache_en)  vif.master_cb.awcache  <= idle_value();
+	if(cfg.awqos_en)    vif.master_cb.awqos    <= idle_value();
+	if(cfg.awregion_en) vif.master_cb.awregion <= idle_value();
 endfunction : drive_aw_channel_reset_values
 
 
@@ -344,12 +355,12 @@ endfunction : drive_aw_channel
 
 
 function void ovip_axi_master_driver::drive_w_channel_reset_values();
-	if(cfg.wuser_width) vif.master_cb.wuser <= 0;
-	vif.master_cb.wdata <= 0;
-	vif.master_cb.wstrb <= 0;
+	if(cfg.wuser_width) vif.master_cb.wuser <= idle_value();
+	vif.master_cb.wdata <= idle_value(int'(cfg.bus_width) * 8);
+	vif.master_cb.wstrb <= idle_value(int'(cfg.bus_width));
 	if(cfg.protocol_type == OVIP_PROTOCOL_AXI4_LITE) return;
-	vif.master_cb.wlast <= 0;
-	if(cfg.wr_id_width && cfg.protocol_type == OVIP_PROTOCOL_AXI3) vif.master_cb.wid <= 0;
+	vif.master_cb.wlast <= idle_value();
+	if(cfg.wr_id_width && cfg.protocol_type == OVIP_PROTOCOL_AXI3) vif.master_cb.wid <= idle_value();
 endfunction : drive_w_channel_reset_values
 
 
@@ -427,7 +438,7 @@ task ovip_axi_master_driver::waddr_phase_driver();
 	outstanding_wr_tr_queue_manager(); // Initiate outstanding_wr_tr_queue_manager thread
 
 	vif.master_cb.awvalid <= 0;
-	if(cfg.drive_reset_values_when_idle)
+	if(cfg.drive_reset_values_when_idle || cfg.randomize_idle_payload)
 		drive_aw_channel_reset_values();
 
 	forever
@@ -489,7 +500,7 @@ task ovip_axi_master_driver::waddr_phase_driver();
 		tr.valid_address_phase = 1;
 		vif.master_cb.awvalid <= 0;
 
-		if(cfg.drive_reset_values_when_idle)
+		if(cfg.drive_reset_values_when_idle || cfg.randomize_idle_payload)
 			drive_aw_channel_reset_values();
 
 		repeat(tr.delay_until_next_addr) @(vif.master_cb);
@@ -502,7 +513,7 @@ task ovip_axi_master_driver::wdata_phase_driver();
 	ovip_axi_trans tr;
 
 	vif.master_cb.wvalid <= 0;
-	if(cfg.drive_reset_values_when_idle)
+	if(cfg.drive_reset_values_when_idle || cfg.randomize_idle_payload)
 		drive_w_channel_reset_values();
 
 	forever
@@ -522,7 +533,7 @@ task ovip_axi_master_driver::wdata_phase_driver();
 		@(vif.master_cb iff vif.master_cb.wready);
 		vif.master_cb.wvalid <= 0;
 
-		if(cfg.drive_reset_values_when_idle)
+		if(cfg.drive_reset_values_when_idle || cfg.randomize_idle_payload)
 			drive_w_channel_reset_values();
 
 		if(tr.burst_index++ == tr.len) // transaction data phase finished

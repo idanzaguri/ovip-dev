@@ -54,6 +54,7 @@ class ovip_axi_slave_driver #(type IF_T = virtual ovip_axi_agent_if) extends ovi
 	extern virtual task bresp_phase_driver(); // initator
 
 	extern virtual function void drive_reset_values();
+	extern virtual function ovip_axi_data_t idle_value(int bits = 64);
 
 	extern virtual function void drive_r_channel_reset_values();
 	extern virtual function void drive_b_channel_reset_values();
@@ -103,6 +104,16 @@ function void ovip_axi_slave_driver::reset_internal_state();
 	end
 endfunction : reset_internal_state
 
+
+// A payload field's value while its VALID is low: zero, or random over `bits`
+// bits when cfg.randomize_idle_payload asks for it. AXI leaves it undefined.
+function ovip_axi_data_t ovip_axi_slave_driver::idle_value(int bits = 64);
+	ovip_axi_data_t v = '0;
+	if(cfg.randomize_idle_payload)
+		for(int ii = 0; ii < bits && ii < $bits(v); ii += 32)
+			v[ii +: 32] = $urandom;
+	return v;
+endfunction : idle_value
 
 function void ovip_axi_slave_driver::drive_reset_values();
 	vif.slave_cb.rvalid <= 0;
@@ -186,9 +197,9 @@ task ovip_axi_slave_driver::wdata_phase_driver();
 endtask : wdata_phase_driver
 
 function void ovip_axi_slave_driver::drive_b_channel_reset_values();
-	if(cfg.wr_id_width) vif.slave_cb.bid   <= 0;
-	if(cfg.buser_width) vif.slave_cb.buser <= 0;
-	vif.slave_cb.bresp <= 0;
+	if(cfg.wr_id_width) vif.slave_cb.bid   <= idle_value();
+	if(cfg.buser_width) vif.slave_cb.buser <= idle_value();
+	vif.slave_cb.bresp <= idle_value();
 endfunction : drive_b_channel_reset_values
 
 
@@ -202,7 +213,7 @@ endfunction : drive_wr_resp
 task ovip_axi_slave_driver::bresp_phase_driver();
 	ovip_axi_trans tr;
 
-	if(cfg.drive_reset_values_when_idle)
+	if(cfg.drive_reset_values_when_idle || cfg.randomize_idle_payload)
 	drive_b_channel_reset_values();
 
 	forever
@@ -217,7 +228,7 @@ task ovip_axi_slave_driver::bresp_phase_driver();
 
 		tr.transaction_finished = 1;
 
-		if(cfg.drive_reset_values_when_idle)
+		if(cfg.drive_reset_values_when_idle || cfg.randomize_idle_payload)
 			drive_b_channel_reset_values();
 
 	end
@@ -226,12 +237,12 @@ endtask : bresp_phase_driver
 
 
 function void ovip_axi_slave_driver::drive_r_channel_reset_values();
-	if(cfg.rd_id_width) vif.slave_cb.rid    <= 0;
-	if(cfg.ruser_width) vif.slave_cb.ruser  <= 0;
-	vif.slave_cb.rdata <= 0;
-	vif.slave_cb.rresp <= 0;
+	if(cfg.rd_id_width) vif.slave_cb.rid    <= idle_value();
+	if(cfg.ruser_width) vif.slave_cb.ruser  <= idle_value();
+	vif.slave_cb.rdata <= idle_value(int'(cfg.bus_width) * 8);
+	vif.slave_cb.rresp <= idle_value();
 	if(cfg.protocol_type == OVIP_PROTOCOL_AXI4_LITE) return;
-	vif.slave_cb.rlast <= 0;
+	vif.slave_cb.rlast <= idle_value();
 endfunction : drive_r_channel_reset_values
 
 
@@ -278,7 +289,7 @@ task ovip_axi_slave_driver::rdata_phase_driver();
 	ovip_axi_trans tr;
 
 	vif.slave_cb.rvalid <= 0;
-	if(cfg.drive_reset_values_when_idle)
+	if(cfg.drive_reset_values_when_idle || cfg.randomize_idle_payload)
 		drive_r_channel_reset_values();
 
 	forever
@@ -293,7 +304,7 @@ task ovip_axi_slave_driver::rdata_phase_driver();
 
 		tr.transaction_finished = (tr.burst_index == tr.len);
 
-		if(cfg.drive_reset_values_when_idle)
+		if(cfg.drive_reset_values_when_idle || cfg.randomize_idle_payload)
 			drive_r_channel_reset_values();
 
 		if(tr.transaction_finished)

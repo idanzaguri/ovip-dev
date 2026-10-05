@@ -170,6 +170,12 @@ AXI leaves an RDATA byte lane that a narrow or unaligned beat does not use undef
 
 `cfg.randomize_unused_rdata = 1` (slave only, default `0`) puts a random value on every other lane instead. A master or interconnect that uses those lanes then shows it, for example a read packer that ORs whole RDATA words (logion_formal FV-6). An AXI-Lite read uses the whole bus, so the switch does nothing there. `ovip_axi_unused_rdata_test` and its `_no_auto_align` variant check it: the master gets the memory's bytes, and non-zero bytes appear outside each beat's bytes.
 
+### Payload while VALID is low
+
+AXI leaves a channel's payload undefined while its VALID is low. By default the driver drives zero there at reset and after every handshake (`drive_reset_values_when_idle`), or holds the last value.
+
+`cfg.randomize_idle_payload = 1` (master and slave, default `0`) puts random values there instead: on AW, W and AR at a master, and on B and R at a slave. It works with or without `drive_reset_values_when_idle`. An interface that takes a field before its handshake then shows it, for example a NoC interface that takes BRESP while BVALID is low (logion_formal FV-5). `ovip_axi_idle_payload_test` checks it: the data still round-trips, and each of the five channels shows a non-zero payload while its VALID is low.
+
 ## Ready Patterns
 
 The level driven on a `ready` signal (`awready`/`wready`/`arready` on the slave side, `rready`/`bready` on the master side) is controlled by a *ready pattern* (`ovip_axi_ready_pattern_t`), a small struct with two fields:

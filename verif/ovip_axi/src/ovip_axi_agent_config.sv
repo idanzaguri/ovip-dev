@@ -73,6 +73,13 @@ class ovip_axi_agent_config extends uvm_object;
 	// Off by default.
 	bit randomize_unused_rdata = 0;
 
+	// Master and slave. AXI leaves a channel's payload undefined while its VALID
+	// is low. When set, the driver puts random values on it (AW, W and AR at a
+	// master; B and R at a slave) at reset and after every handshake, instead
+	// of zero or the last value. An interface that takes a field before its
+	// handshake then shows it. Off by default.
+	bit randomize_idle_payload = 0;
+
 	// When set, suppress the "delayed slave sequence" warning. Enable this if the
 	// slave sequence intentionally consumes simulation time before responding.
 	bit suppress_delayed_slave_seq_warning = 0;
