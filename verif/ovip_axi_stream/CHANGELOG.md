@@ -9,6 +9,19 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+### Fixed -- VIP
+
+- The monitor's reset check flagged TVALID on the first cycle of a reset in
+  the middle of a packet (`AXIS_MON/RESET`). A synchronous transmitter sees
+  the reset on that same edge, so TVALID cannot be low yet. The check now
+  gives the first reset cycle grace, as `ovip_axi`'s monitor does, and
+  checks every reset cycle after it, not only the first.
+
+### Added -- testbench
+
+- `ovip_axi_stream_mid_test_reset_test`: a reset in the middle of a packet,
+  then packets after the release, each matched by the scoreboard.
+
 ## [0.1.2] -- 2026-10-05
 
 ### Fixed -- VIP
