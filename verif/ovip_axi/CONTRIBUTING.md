@@ -90,9 +90,10 @@ A few open items that are well-scoped for a new contributor:
   samples those values then passes. logion_formal found four such bugs that
   logion_tb's whole-NoC bench missed this way (idanzaguri/logion_formal #1, #3,
   #5 and #6). The four switches:
-  1. **Master: random WDATA bytes where WSTRB is low** (`drive_w_channel`),
-     inside and outside the beat's byte window. It exposes a write packer that
-     ORs whole WDATA words into a flit (logion_formal FV-1).
+  1. **Master: random WDATA bytes where WSTRB is low**: done, as
+     `cfg.randomize_unstrobed_wdata` (the README's "Bytes under a low
+     strobe"). It exposes a write packer that ORs whole WDATA words into a
+     flit (logion_formal FV-1).
   2. **Slave: random RDATA bytes on the lanes a narrow beat does not use**
      (`drive_rd_channel`). It exposes a read packer that ORs whole RDATA words
      (FV-6).

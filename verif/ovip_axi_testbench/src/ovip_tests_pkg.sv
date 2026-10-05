@@ -19,6 +19,7 @@ package ovip_tests_pkg;
 	`include "ovip_axi_b2b_test.sv"
 	`include "ovip_axi_data_before_address_test.sv"
 	`include "ovip_axi_narrow_transfer_alignment_test.sv"
+	`include "ovip_axi_unstrobed_wdata_test.sv"
 	`include "ovip_axi_bad_dba_test.sv"
 	`include "ovip_axi_xz_test.sv"
 	`include "ovip_axi_signal_stability_test.sv"

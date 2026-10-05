@@ -158,6 +158,12 @@ The wire picture is identical -- only who shifts the data differs.
 
 INCR, FIXED, and WRAP are all supported under auto-alignment, including the corners -- narrow transfers, unaligned start addresses, FIXED with `burst_size == bus_width` at an aligned and an unaligned address (covered by `ovip_axi_fixed_full_width_alignment_test`), and WRAP at all spec-legal lengths (covered by `ovip_axi_wrap_burst_test`). On a full-width transfer with an aligned address the lane offset is zero, so the master driver and slave/monitor sample the data unshifted -- exactly what the user wrote in `data_beats[i]`. The monitor enforces WRAP's spec rules (length ∈ {2,4,8,16} and start address aligned to `burst_size`).
 
+### Bytes under a low strobe
+
+AXI leaves a WDATA byte whose WSTRB bit is low undefined. By default the master drives zero there: on the lanes outside a narrow or unaligned beat's window, and on the bytes a strobe hole leaves. The wire pictures above are for that default.
+
+`cfg.randomize_unstrobed_wdata = 1` (master only, default `0`) puts a random value on every such byte instead. A slave or interconnect that uses those bytes then shows it, for example a write packer that ORs whole WDATA words into one flit (logion_formal FV-1). `ovip_axi_unstrobed_wdata_test` checks the switch: the memory takes the strobed bytes alone, and non-zero bytes appear under low strobes.
+
 ## Ready Patterns
 
 The level driven on a `ready` signal (`awready`/`wready`/`arready` on the slave side, `rready`/`bready` on the master side) is controlled by a *ready pattern* (`ovip_axi_ready_pattern_t`), a small struct with two fields:

@@ -354,16 +354,26 @@ endfunction : drive_w_channel_reset_values
 
 
 function void ovip_axi_master_driver::drive_w_channel(ovip_axi_trans tr);
+	ovip_axi_data_t wdata;
+	ovip_axi_strb_t wstrb;
 	if(cfg.auto_byte_lanes_alignment && (tr.is_narrow_transfer || tr.burst_index == 0 || tr.burst == OVIP_AXI_BURST_FIXED))
 	begin
-		vif.master_cb.wdata <= tr.data_beats[tr.burst_index]<<tr.transfer_starting_byte_lane[tr.burst_index]*8;
-		vif.master_cb.wstrb <= tr.strb_beats[tr.burst_index]<<tr.transfer_starting_byte_lane[tr.burst_index];
+		wdata = tr.data_beats[tr.burst_index]<<tr.transfer_starting_byte_lane[tr.burst_index]*8;
+		wstrb = tr.strb_beats[tr.burst_index]<<tr.transfer_starting_byte_lane[tr.burst_index];
 	end
 	else
 	begin
-		vif.master_cb.wdata <= tr.data_beats[tr.burst_index];
-		vif.master_cb.wstrb <= tr.strb_beats[tr.burst_index];
+		wdata = tr.data_beats[tr.burst_index];
+		wstrb = tr.strb_beats[tr.burst_index];
 	end
+
+	// A byte whose strobe is low is undefined in AXI: random instead of zero when asked
+	if(cfg.randomize_unstrobed_wdata)
+		for(int ii = 0; ii < int'(cfg.bus_width); ii++)
+			if(!wstrb[ii]) wdata[ii*8 +: 8] = $urandom;
+
+	vif.master_cb.wdata <= wdata;
+	vif.master_cb.wstrb <= wstrb;
 
 	if(cfg.wuser_width) vif.master_cb.wuser <= tr.wuser;
 

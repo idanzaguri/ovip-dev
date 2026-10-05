@@ -60,6 +60,12 @@ class ovip_axi_agent_config extends uvm_object;
 
 	bit auto_byte_lanes_alignment = 1;
 
+	// Master only. AXI leaves a WDATA byte whose WSTRB bit is low undefined.
+	// When set, the driver puts a random value on every such byte, inside or
+	// outside the beat's byte window, instead of zero. A slave or interconnect
+	// that uses those bytes then shows it. Off by default.
+	bit randomize_unstrobed_wdata = 0;
+
 	// When set, suppress the "delayed slave sequence" warning. Enable this if the
 	// slave sequence intentionally consumes simulation time before responding.
 	bit suppress_delayed_slave_seq_warning = 0;
