@@ -13,4 +13,5 @@ package ovip_axi_stream_tests_pkg;
 	`include "ovip_axi_stream_backpressure_test.sv"
 	`include "ovip_axi_stream_reserved_byte_qual_test.sv"
 	`include "ovip_axi_stream_mid_test_reset_test.sv"
+	`include "ovip_axi_stream_mid_test_reset_gap_test.sv"
 endpackage : ovip_axi_stream_tests_pkg

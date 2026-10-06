@@ -262,6 +262,10 @@ task ovip_axi_stream_monitor::stability_check();
 		while(!vif.monitor_cb.tready)
 		begin
 			@(vif.monitor_cb);
+			// A reset ends the transfer, and rst_monitor drops it. A transmitter
+			// reset asynchronously drops TVALID on the same edge, and the two
+			// threads wake on that edge in either order, so the reset comes first.
+			if(vif.monitor_cb.aresetn !== 1'b1) break;
 			if(vif.monitor_cb.tvalid !== 1'b1)
 				`uvm_error({MESSAGE_TAG, "AXIS_MON/STABILITY"}, "TVALID deasserted before TREADY -- once HIGH, TVALID must stay HIGH until handshake (spec section 2.2).")
 			if(cfg.tdata_width > 0 && snap_tdata !== (vif.monitor_cb.tdata & DATA_MASK))
