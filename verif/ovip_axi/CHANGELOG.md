@@ -11,6 +11,13 @@ breaks are called out explicitly in their changelog entry.
 
 ### Fixed -- VIP
 
+- A WRAP burst's per-beat byte lanes went negative on an address with bit
+  63 set ("Active byte lanes are [-4:-4]"), and the slave then placed its
+  read data on those lanes. The lane math used a signed `longint`, which the
+  2^31 fix moved to, and an address at or above 2^63 is negative there. It
+  is unsigned 64-bit now. Found by noc_proj's design fuzzer: under its
+  msb_slice target scheme a 64-bit address puts the slave select in the top
+  bits.
 - The monitor's stability checks took a reset under VALID as "xVALID was
   de-asserted before the transfer was sampled", and as a payload "changed
   before being sampled", when the other side dropped VALID with the reset,
