@@ -4,7 +4,8 @@
 //   - builds an ovip_mem instance and a default base slave sequence backed by it
 //   - installs ovip_axi_expected_errors_report_server (see ovip_axi_expected_errors_report_server.sv) so tests can register
 //     expected errors via custom_report_server.expected_errors
-//   - prints the SvtTestEpilog: Passed/Failed line at final_phase
+//   - reports every expected error that never fired as a UVM_ERROR at
+//     final_phase
 // Subclasses typically override build_phase (config tweaks) and main_phase
 // (stimulus).
 
@@ -110,15 +111,6 @@ class ovip_axi_base_test extends uvm_test;
 			custom_report_server.expected_errors.delete();
 			foreach(expected_errors[ii])
 				`uvm_error("AXI_TEST/MISSING_EXP_ERROR", expected_errors[ii])
-		end
-
-		begin
-			uvm_report_server svr;
-			svr = uvm_report_server::get_server();
-			if (svr.get_severity_count(UVM_FATAL) + svr.get_severity_count(UVM_ERROR) + svr.get_severity_count(UVM_WARNING) > 0)
-				`uvm_info("final_phase", "\nSvtTestEpilog: Failed\n", UVM_LOW)
-			else
-				`uvm_info("final_phase", "\nSvtTestEpilog: Passed", UVM_LOW)
 		end
 	endfunction
 

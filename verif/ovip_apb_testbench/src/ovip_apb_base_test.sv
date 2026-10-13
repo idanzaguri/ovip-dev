@@ -12,7 +12,8 @@
 //     `create_slave_seq` to inject errors or directed wait states)
 //   - installs ovip_apb_expected_errors_report_server so tests can register
 //     expected errors via custom_report_server.expected_errors
-//   - prints `SvtTestEpilog: Passed` / `Failed` at final_phase
+//   - reports every expected error that never fired as a UVM_ERROR at
+//     final_phase
 class ovip_apb_base_test extends uvm_test;
 	ovip_apb_expected_errors_report_server custom_report_server;
 
@@ -108,13 +109,6 @@ class ovip_apb_base_test extends uvm_test;
 			custom_report_server.expected_errors.delete();
 			foreach(expected_errors[ii])
 				`uvm_error("APB_TEST/MISSING_EXP_ERROR", expected_errors[ii])
-		end
-		begin
-			uvm_report_server svr = uvm_report_server::get_server();
-			if(svr.get_severity_count(UVM_FATAL) + svr.get_severity_count(UVM_ERROR) + svr.get_severity_count(UVM_WARNING) > 0)
-				`uvm_info("final_phase", "\nSvtTestEpilog: Failed\n", UVM_LOW)
-			else
-				`uvm_info("final_phase", "\nSvtTestEpilog: Passed", UVM_LOW)
 		end
 	endfunction
 endclass : ovip_apb_base_test

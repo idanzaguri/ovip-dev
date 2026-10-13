@@ -4,7 +4,7 @@
 // Negative test: drive a single packet where one byte has the reserved
 // TKEEP=0, TSTRB=1 combination (spec section 2.5.3). The monitor must raise
 // AXIS_MON/BYTE_QUAL on the receiver side; the test absorbs that error via
-// expected_errors so the run still reports SvtTestEpilog: Passed.
+// expected_errors so the run still passes.
 
 class ovip_axi_stream_reserved_byte_qual_seq extends ovip_axi_stream_base_master_sequence;
 	`uvm_object_utils(ovip_axi_stream_reserved_byte_qual_seq)
