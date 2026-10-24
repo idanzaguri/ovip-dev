@@ -9,6 +9,15 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+### Added -- VIP
+
+- `randomize_idle_payload` in `ovip_apb_agent_config`, requester only:
+  random PADDR, PWRITE, PWDATA, and PSTRB and PPROT where present, while
+  PSEL is LOW, at reset and after every transfer. A completer that takes
+  a payload signal while PSEL is LOW then shows it. Off by default. Asked
+  for by logion_tb, whose read-only APB requesters never toggled PWRITE
+  or PWDATA at the NoC's port. `ovip_apb_idle_payload_test`.
+
 ### Fixed -- VIP
 
 - The monitor took a reset in the middle of a transfer as a protocol error
@@ -23,6 +32,9 @@ breaks are called out explicitly in their changelog entry.
 
 - `ovip_apb_mid_test_reset_test`: a reset while a transfer waits in ACCESS,
   PSEL dropped with it, then traffic after the release.
+- `ovip_apb_idle_payload_test`: write and read-back traffic with random
+  gaps from a requester with `randomize_idle_payload`; the idle cycles
+  must show PWRITE HIGH and PADDR and PWDATA non-zero.
 
 ## [0.2.0] -- 2026-10-05
 

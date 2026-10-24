@@ -25,6 +25,7 @@ want to add them.
 | Completer model | Reactive memory-backed base slave sequence (`ovip_mem`), or override the hooks for a register model |
 | Scoreboard | `ovip_apb_scoreboard`, in-order, `trans.diff()`-formatted mismatch reports |
 | Transaction logging | Per-agent + combined-file text log via `cfg.enable_trans_log` |
+| Idle values | 0 on every idle cycle (`cfg.drive_reset_values_when_idle`, on by default), the last value, or random payload on a requester (`cfg.randomize_idle_payload`) |
 
 Full list of known limitations lives in [CHANGELOG.md](CHANGELOG.md);
 wanted-features in [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -66,6 +67,11 @@ ovip_apb_agent req_agent = ovip_apb_agent::type_id::create("req_agent", this);
 req_agent.cfg = req_cfg;
 // ... and the same with OVIP_APB_COMPLETER for the completer side.
 ```
+
+A requester with `req_cfg.randomize_idle_payload = 1` drives random PADDR,
+PWRITE, PWDATA, PSTRB and PPROT while PSEL is LOW, at reset and after every
+transfer. APB gives them a meaning only while PSEL is HIGH, so a completer
+that takes one too early shows it. It is off by default.
 
 Bind the interface once per agent scope:
 

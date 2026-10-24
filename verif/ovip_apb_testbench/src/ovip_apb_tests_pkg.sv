@@ -14,4 +14,5 @@ package ovip_apb_tests_pkg;
 	`include "ovip_apb_strobe_test.sv"
 	`include "ovip_apb_slave_out_of_range_test.sv"
 	`include "ovip_apb_mid_test_reset_test.sv"
+	`include "ovip_apb_idle_payload_test.sv"
 endpackage : ovip_apb_tests_pkg
