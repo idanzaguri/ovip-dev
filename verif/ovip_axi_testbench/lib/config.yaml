@@ -21,6 +21,9 @@ files:
   - "src/ovip_tests_pkg.sv"
   - "src/tb.sv"
 
+verilator_config:
+  - "lib/verilator.vlt"
+
 sim_args:
 comp_args:
 

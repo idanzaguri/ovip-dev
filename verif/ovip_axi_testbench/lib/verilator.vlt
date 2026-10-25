@@ -1,0 +1,19 @@
+`verilator_config
+// Config file for Verilator runs of ovip_axi_testbench (test_runner --simulator verilator).
+// (A comment must not start with the word verilator: that is a metacomment.)
+// Signals the tests drive through uvm_hdl_force/uvm_hdl_release need to be
+// forceable and visible to VPI:
+//   tb.rst_n                  ovip_axi_mid_test_reset_test, ovip_axi_mid_test_reset_inflight_test,
+//                             ovip_axi_mid_test_reset_async_valid_test
+//   tb.rvalid                 ovip_axi_mid_test_reset_async_valid_test
+//   tb.master_axi_if.awlen    ovip_axi_bad_dba_test
+// ovip_axi_xz_test is not on this list: it injects X, and Verilator is 2-state.
+// Do not widen this to -var "*": forceable on the tb nets that connect the two
+// interface instances makes Verilator stop with "Cannot detect changes on
+// expression of complex type 'interface ovip_axi_agent_if'".
+forceable      -module "tb" -var "rst_n"
+public_flat_rw -module "tb" -var "rst_n"
+forceable      -module "tb" -var "rvalid"
+public_flat_rw -module "tb" -var "rvalid"
+forceable      -module "ovip_axi_agent_if" -var "awlen"
+public_flat_rw -module "ovip_axi_agent_if" -var "awlen"

@@ -1,0 +1,10 @@
+`verilator_config
+// Config file for Verilator runs of ovip_apb_testbench (test_runner --simulator verilator).
+// (A comment must not start with the word verilator: that is a metacomment.)
+// Signals the tests drive through uvm_hdl_force/uvm_hdl_release need to be
+// forceable and visible to VPI. ovip_apb_mid_test_reset_test forces tb.presetn
+// and tb.apb_if.psel.
+forceable      -module "tb" -var "presetn"
+public_flat_rw -module "tb" -var "presetn"
+forceable      -module "ovip_apb_agent_if" -var "psel"
+public_flat_rw -module "ovip_apb_agent_if" -var "psel"
