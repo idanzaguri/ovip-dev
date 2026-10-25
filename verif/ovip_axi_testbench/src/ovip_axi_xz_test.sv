@@ -169,7 +169,10 @@ class ovip_axi_xz_test extends ovip_axi_base_test;
 			assert(uvm_hdl_release($sformatf("tb.bid[%0d]",master_cfg.wr_id_width-ii)));
 
 			foreach(custom_report_server.expected_errors[ii]) $display(custom_report_server.expected_errors[ii]);
-			custom_report_server.expected_errors = custom_report_server.expected_errors.find(item) with (item != "AXI_MON.INVALID_WSTRB");
+			begin
+				string remaining[$] = custom_report_server.expected_errors.find(item) with (item != "AXI_MON.INVALID_WSTRB");
+				custom_report_server.expected_errors = remaining;
+			end
 			assert(custom_report_server.expected_errors.size() == 0);
 		end
 

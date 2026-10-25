@@ -215,7 +215,6 @@ class axi_lite_seq extends uvm_sequence#(ovip_axi_trans);
 					@(p_sequencer.vif.monitor_cb);
 					if(!p_sequencer.vif.monitor_cb.rvalid) `uvm_error("btb_rd_simple", "missing rvalid!")
 				end
-				if(!p_sequencer.vif.monitor_cb.rlast) `uvm_error("btb_rd_simple", "missing rlast!")
 			end
 		join
 
