@@ -1,6 +1,7 @@
 `include "uvm_macros.svh"
 
 package ovip_apb_tests_pkg;
+	timeunit 1ns; timeprecision 1ps;
 	import uvm_pkg::*;
 	import ovip_global_pkg::*;
 	import ovip_mem_pkg::*;

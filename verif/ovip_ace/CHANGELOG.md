@@ -9,6 +9,14 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+### Changed -- VIP
+
+- `ovip_ace_pkg` declares `timeunit 1ns; timeprecision 1ps;`. The
+  package took the time unit of the compilation unit before (the simulator's
+  default, or an earlier `timescale` in the compile order); `$time` and
+  `$realtime` in log lines and transaction time stamps are in ns on every
+  simulator now. Verilator no longer reports `TIMESCALEMOD` for it.
+
 ## [0.1.1] -- 2026-07-28
 
 ### Fixed

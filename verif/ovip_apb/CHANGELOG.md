@@ -20,6 +20,12 @@ breaks are called out explicitly in their changelog entry.
 
 ### Changed -- VIP
 
+- `ovip_apb_pkg` declares `timeunit 1ns; timeprecision 1ps;`. The
+  package took the time unit of the compilation unit before (the simulator's
+  default, or an earlier `timescale` in the compile order); `$time` and
+  `$realtime` in log lines and transaction time stamps are in ns on every
+  simulator now. Verilator no longer reports `TIMESCALEMOD` for it.
+
 - The completer driver's `vif.slave_cb.triggered` check (an item answered
   off the SETUP edge) is compiled out on Verilator, under `ifndef VERILATOR`,
   the same way it is on Xcelium: neither accepts `.triggered` on a clocking

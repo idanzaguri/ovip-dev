@@ -18,6 +18,12 @@ breaks are called out explicitly in their changelog entry.
 
 ### Changed -- VIP
 
+- `ovip_axi_pkg` declares `timeunit 1ns; timeprecision 1ps;`. The
+  package took the time unit of the compilation unit before (the simulator's
+  default, or an earlier `timescale` in the compile order); `$time` and
+  `$realtime` in log lines and transaction time stamps are in ns on every
+  simulator now. Verilator no longer reports `TIMESCALEMOD` for it.
+
 - The slave driver's `vif.slave_cb.triggered` check in `transaction_acceptor`
   (an item returned off a `slave_cb` edge, with its one-cycle wait and the
   `SLAVE_DRV` warning) is compiled out on Verilator, under `ifndef VERILATOR`,
