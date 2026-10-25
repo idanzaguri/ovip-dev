@@ -13,7 +13,9 @@ and this package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - `ovip_mem_space::resolve` indexed a striped region's sub list with the
   64-bit `chunk % n`, which Xcelium elaborates with a `BIGWIX` (memory
   index truncation) warning. The index is now cast to `int`; the value,
-  always below the number of subs, is unchanged.
+  always below the number of subs, is unchanged. The cast is done into a
+  local variable before the index: Verilator 5.052 fails with an internal
+  error on a cast written directly inside a queue index.
 
 ## [0.4.0] -- 2026-10-05
 
