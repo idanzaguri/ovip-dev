@@ -18,6 +18,13 @@ breaks are called out explicitly in their changelog entry.
   for by logion_tb, whose read-only APB requesters never toggled PWRITE
   or PWDATA at the NoC's port. `ovip_apb_idle_payload_test`.
 
+### Changed -- VIP
+
+- The completer driver's `vif.slave_cb.triggered` check (an item answered
+  off the SETUP edge) is compiled out on Verilator, under `ifndef VERILATOR`,
+  the same way it is on Xcelium: neither accepts `.triggered` on a clocking
+  block. Nothing changes on Questa or VCS.
+
 ### Fixed -- VIP
 
 - The monitor took a reset in the middle of a transfer as a protocol error

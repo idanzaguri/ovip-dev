@@ -16,6 +16,14 @@ breaks are called out explicitly in their changelog entry.
   sequence can drive a master in several service classes. A burst past the
   end of the list keeps AxQOS 0, as before; an empty list changes nothing.
 
+### Changed -- VIP
+
+- The slave driver's `vif.slave_cb.triggered` check in `transaction_acceptor`
+  (an item returned off a `slave_cb` edge, with its one-cycle wait and the
+  `SLAVE_DRV` warning) is compiled out on Verilator, under `ifndef VERILATOR`,
+  the same way it is on Xcelium: neither accepts `.triggered` on a clocking
+  block. Nothing changes on Questa or VCS.
+
 ### Fixed -- VIP
 
 - A WRAP burst's per-beat byte lanes went negative on an address with bit
