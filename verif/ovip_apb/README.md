@@ -47,8 +47,12 @@ export OVIP_ROOT=/path/to/ovip
 | Modelsim/Questa | `vlog -sv -mfcu -f $OVIP_ROOT/verif/ovip_apb/ovip_apb.f` |
 | VCS             | `vcs -sverilog -ntb_opts uvm-1.2 -f $OVIP_ROOT/verif/ovip_apb/ovip_apb.f` |
 | Xcelium         | `xrun -uvm -uvmhome CDNS-1.2 -sv -f $OVIP_ROOT/verif/ovip_apb/ovip_apb.f` |
+| Verilator       | `verilator --binary --timing +define+UVM_NO_DPI +incdir+$UVM_HOME/src $UVM_HOME/src/uvm_pkg.sv -f $OVIP_ROOT/verif/ovip_apb/ovip_apb.f` |
 
-UVM 1.2 comes from your simulator's built-in library.
+UVM 1.2 comes from your simulator's built-in library. Verilator has none:
+`UVM_HOME` is a UVM 1.2 source tree, and `randomize()` needs an SMT solver
+(z3, cvc5, yices-smt2 or bitwuzla) at run time. See
+[Running on Verilator](../../README.md#running-on-verilator).
 
 ## Instantiating the agents
 

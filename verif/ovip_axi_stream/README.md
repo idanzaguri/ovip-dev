@@ -36,8 +36,9 @@ export OVIP_ROOT=/path/to/ovip
 | Modelsim/Questa | `vlog -sv -mfcu -f $OVIP_ROOT/verif/ovip_axi_stream/ovip_axi_stream.f` |
 | VCS             | `vcs -sverilog -ntb_opts uvm-1.2 -f $OVIP_ROOT/verif/ovip_axi_stream/ovip_axi_stream.f` |
 | Xcelium         | `xrun -uvm -uvmhome CDNS-1.2 -sv -f $OVIP_ROOT/verif/ovip_axi_stream/ovip_axi_stream.f` |
+| Verilator       | `verilator --binary --timing +define+UVM_NO_DPI +incdir+$UVM_HOME/src $UVM_HOME/src/uvm_pkg.sv -f $OVIP_ROOT/verif/ovip_axi_stream/ovip_axi_stream.f` |
 
-UVM 1.2 comes from your simulator's built-in library. Apply any [Compile-Time Defines](#compile-time-defines) below as additional `+define+...` arguments on the same compile line.
+UVM 1.2 comes from your simulator's built-in library; Verilator has none, so `UVM_HOME` is a UVM 1.2 source tree and `randomize()` needs an SMT solver at run time, see [Running on Verilator](../../README.md#running-on-verilator). Apply any [Compile-Time Defines](#compile-time-defines) below as additional `+define+...` arguments on the same compile line.
 
 The minimal runnable example is [`examples/ovip_axi_stream/01_loopback/`](../../examples/ovip_axi_stream/01_loopback/); for the receiver-into-memory pipeline see [`examples/ovip_axi_stream/02_rx_to_mem/`](../../examples/ovip_axi_stream/02_rx_to_mem/).
 
