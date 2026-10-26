@@ -31,6 +31,12 @@ breaks are called out explicitly in their changelog entry.
   the same way it is on Xcelium: neither accepts `.triggered` on a clocking
   block. Nothing changes on Questa or VCS.
 
+- The interface's clocking blocks (`monitor_cb`, `master_cb`, `slave_cb`)
+  take their skews from `OVIP_INPUT_SKEW` and `OVIP_OUTPUT_SKEW`
+  (`ovip_common/ovip_common_defines.sv`, overridable with `+define+`)
+  instead of the hard-coded `input #1step output #0`. The defaults are the
+  same values, so nothing changes unless you override them.
+
 ### Fixed -- VIP
 
 - The monitor took a reset in the middle of a transfer as a protocol error

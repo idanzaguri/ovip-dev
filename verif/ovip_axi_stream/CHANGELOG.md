@@ -17,6 +17,12 @@ breaks are called out explicitly in their changelog entry.
   `$realtime` in log lines and transaction time stamps are in ns on every
   simulator now. Verilator no longer reports `TIMESCALEMOD` for it.
 
+- The interface's clocking blocks (`monitor_cb`, `master_cb`, `slave_cb`)
+  take their skews from `OVIP_INPUT_SKEW` and `OVIP_OUTPUT_SKEW`
+  (`ovip_common/ovip_common_defines.sv`, overridable with `+define+`)
+  instead of the hard-coded `input #1step output #0`. The defaults are the
+  same values, so nothing changes unless you override them.
+
 ### Fixed -- VIP
 
 - The master driver sent a packet from before a reset again after the

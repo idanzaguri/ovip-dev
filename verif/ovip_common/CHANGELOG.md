@@ -8,6 +8,14 @@ and this package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- `ovip_common_defines.sv`: the compile-time defines shared by every VIP.
+  `OVIP_INPUT_SKEW` (default `1step`) and `OVIP_OUTPUT_SKEW` (default `0`)
+  are the clocking-block skews of every OVIP interface; `+define+` either
+  on the compile line to override it for all of them. Each VIP's defines
+  file includes it.
+
 ### Changed
 
 - `ovip_global_pkg` and `ovip_mem_pkg` declare `timeunit 1ns; timeprecision

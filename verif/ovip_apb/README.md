@@ -125,3 +125,5 @@ injection, directed wait states, or a register-model completer.
 | `OVIP_APB_WAIT_STATES_MAX` | 15 | Soft cap on randomized `num_wait_states` |
 | `OVIP_APB_DELAY_UNTIL_NEXT_TRANS_MAX` | 30 | Soft cap on randomized inter-transfer gaps |
 | `OVIP_APB_INCLUDE_USER_DEFINES` | off | Include a user-supplied `ovip_apb_user_defines.sv` first |
+| `OVIP_INPUT_SKEW` | `1step` | Input skew of the interface's clocking blocks (`monitor_cb`, `master_cb`, `slave_cb`): the value from before the clock edge. Shared by every OVIP VIP (`ovip_common/ovip_common_defines.sv`). |
+| `OVIP_OUTPUT_SKEW` | `0` | Output skew of the same clocking blocks. |

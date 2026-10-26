@@ -30,6 +30,18 @@ breaks are called out explicitly in their changelog entry.
   the same way it is on Xcelium: neither accepts `.triggered` on a clocking
   block. Nothing changes on Questa or VCS.
 
+- The interface's clocking blocks (`monitor_cb`, `master_cb`, `slave_cb`)
+  take their skews from `OVIP_INPUT_SKEW` and `OVIP_OUTPUT_SKEW`
+  (`ovip_common/ovip_common_defines.sv`, overridable with `+define+`),
+  where they had `localparam INPUT_SKEW = 0; OUTPUT_SKEW = 0;` that nothing
+  could override. The default input skew is `1step`: an input is sampled
+  with its value from before the clock edge, as a synchronous receiver
+  sees it. `#0` sampled after the edge's own updates, and Verilator does
+  exactly that: a VALID dropped at the sampling edge was reported by the
+  monitor's stability check as "de-asserted before the transfer was
+  sampled" (noc_proj's bench on Verilator 5.053; Questa passed the same
+  seed). `+define+OVIP_INPUT_SKEW=0` restores the old sampling.
+
 ### Fixed -- VIP
 
 - A WRAP burst's per-beat byte lanes went negative on an address with bit

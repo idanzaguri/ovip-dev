@@ -96,6 +96,13 @@ or globally:
 - Leave `size_width` at its default `3`: `check_config` auto-bumps it to `4` (with a UVM_INFO) whenever `bus_width > 128B`. The `awsize`/`arsize` wires are 4 bits wide so spec-compliant agents (size ≤ 7) are unaffected.
 
 
+### Clocking-Block Skews
+
+| Define | Default | Used for |
+|---|---|---|
+| `OVIP_INPUT_SKEW` | `1step` | Input skew of the interface's clocking blocks (`monitor_cb`, `master_cb`, `slave_cb`): the value from before the clock edge. Shared by every OVIP VIP (`ovip_common/ovip_common_defines.sv`). |
+| `OVIP_OUTPUT_SKEW` | `0` | Output skew of the same clocking blocks. |
+
 ## Basic Timings
 
 ### Read Transaction Timing

@@ -54,6 +54,8 @@ The minimal runnable example is [`examples/ovip_axi_stream/01_loopback/`](../../
 | `OVIP_AXI_STREAM_MAX_USER_WIDTH` | `1024` | TUSER wire width. Sized to allow large per-byte payloads on wide buses. |
 | `OVIP_AXI_STREAM_DELAY_BETWEEN_BEATS_MAX` | `30` | Soft cap on randomized per-beat gap. |
 | `OVIP_AXI_STREAM_DELAY_UNTIL_NEXT_TRANS_MAX` | `30` | Soft cap on randomized inter-packet gap. |
+| `OVIP_INPUT_SKEW` | `1step` | Input skew of the interface's clocking blocks (`monitor_cb`, `master_cb`, `slave_cb`): the value from before the clock edge. Shared by every OVIP VIP (`ovip_common/ovip_common_defines.sv`). |
+| `OVIP_OUTPUT_SKEW` | `0` | Output skew of the same clocking blocks. |
 
 ## Signal model
 
