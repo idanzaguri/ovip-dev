@@ -46,7 +46,8 @@ Usage:
     # and paste eda_tb.sv into the testbench.sv pane
 
 The generated eda_tb.sv carries the EDA Playground settings (UVM version, top
-module, defines, test list) in its header comment.
+module, defines, test list) in its header comment, and defines
+OVIP_EDA_PLAYGROUND so a test can tell a Playground run from a local one.
 """
 
 import argparse
@@ -458,6 +459,9 @@ def render_eda_tb(subject, defines, tests, top_module, uvm_version="1.2"):
     if tests:
         out.append("// Pick the test to run by uncommenting exactly one TEST_NAME below.\n")
     out.append("\n")
+    out.append("// The bundle marks itself: a test can tell a Playground run from a local\n")
+    out.append("// one (ovip_mem_test fits its benchmark to the site's runtime cap).\n")
+    out.append("`define OVIP_EDA_PLAYGROUND\n\n")
     for d in defines:
         name, _, value = d.partition("=")
         out.append(f"`define {name}{(' ' + value) if value else ''}\n")

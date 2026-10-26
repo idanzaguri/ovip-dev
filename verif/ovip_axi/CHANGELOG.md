@@ -9,6 +9,14 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+### Changed -- testbench
+
+- `ovip_mem_test`: on EDA Playground (the bundle's `eda_tb.sv` defines
+  `OVIP_EDA_PLAYGROUND`) the write_bytestream benchmark runs rounds for 15 s
+  of wall time instead of the 1000 rounds that ran past the site's runtime
+  cap, and prints a `ROUNDS:` line with the calls per second. Locally it
+  still runs 1000 rounds.
+
 ## [0.5.0] -- 2026-10-26
 
 ### Added -- VIP

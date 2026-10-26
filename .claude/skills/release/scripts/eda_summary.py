@@ -23,8 +23,9 @@ KNOWN_WARNINGS = [
     r"Warning-\[TLRCE\]",      # VCS: repeat (size) in ovip_mem.sv, 64-bit count
     r"\*W,PRPASZ",             # xmsim probe-size notice on uvm_string_to_bits
 ]
-# Tests that hit the Playground runtime cap by design.
-KNOWN_INTERRUPTED = {"ovip_mem_test"}
+# Tests that hit the Playground runtime cap by design. None since ovip_mem_test
+# fits its benchmark to the cap (OVIP_EDA_PLAYGROUND); an interrupted run fails.
+KNOWN_INTERRUPTED = set()
 
 COMP_ERR = re.compile(r"^(Error-\[|\*E,|\*F,|xmvlog: \*E|xmelab: \*E)", re.M)
 COMP_WARN = re.compile(r"^(Warning-\[.*|\*W,.*|xmsim: \*W,.*|xmelab: \*W,.*|xmvlog: \*W,.*)$", re.M)

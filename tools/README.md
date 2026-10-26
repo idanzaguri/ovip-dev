@@ -49,6 +49,11 @@ python3 tools/bundle_for_eda.py --vip ace --top example    # no testbench -> use
 python3 tools/bundle_for_eda.py --vip all --out eda_all/   # every VIP in one bundle
 ```
 
+`eda_tb.sv` defines `OVIP_EDA_PLAYGROUND`, so a test can tell a Playground run
+from a local one. `ovip_mem_test` uses it: its benchmark runs 1000 rounds
+locally, and on the Playground, where that count runs past the site's runtime
+cap, it runs rounds for 15 s of wall time and prints the rate.
+
 `--vip all` is the cross-simulator check. It puts every VIP into a single
 bundle behind a generated top that instantiates each VIP's interface, waits out
 a reset and finishes; no test runs and no testbench defines are applied, so

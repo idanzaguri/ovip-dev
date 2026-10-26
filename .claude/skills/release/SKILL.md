@@ -92,9 +92,9 @@ simulators. The runner posts every log to the server; finish with
 python3 .claude/skills/release/scripts/eda_summary.py --warnings
 ```
 
-Known noise is listed in the reference (VCS `TLRCE`, Xcelium `PRPASZ`,
-`ovip_mem_test` at the runtime cap). A compile error, a UVM_ERROR or
-UVM_FATAL, or a warning not on that list stops the release.
+Known noise is listed in the reference (VCS `TLRCE`, Xcelium `PRPASZ`). A
+compile error, a UVM_ERROR or UVM_FATAL, an interrupted run, or a warning not
+on that list stops the release.
 
 The whole Playground pass takes about an hour, most of it the 53 AXI tests.
 Report progress in one line now and then; the user cannot see the browser

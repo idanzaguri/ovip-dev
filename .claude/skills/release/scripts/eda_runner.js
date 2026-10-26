@@ -10,7 +10,7 @@
 //    references/eda-playground.md, then check __ovip.tabs())
 //   __ovip.start(__ovip.tests(), ['vcs', 'xcelium'])
 //                                      every test of the bundle on each
-//                                      simulator; ovip_mem_test last
+//                                      simulator
 //   __ovip.status()                    poll; running, current test, last results
 //   __ovip.go()                        clear the unsaved-changes guard and load
 //                                      a fresh playground for the next bundle
@@ -60,11 +60,9 @@
                  + ' | vcs ' + co.value + ' | tb lines ' + this.cm().lineCount() + ' | tabs ' + this.tabs().join(','));
     },
     // Test names from the TEST_NAME defines of eda_tb.sv (active and commented
-    // out). ovip_mem_test goes last: its benchmark block hits the Playground
-    // runtime cap, so it takes minutes.
+    // out), in file order.
     tests() {
-      const all = [...this.cm().getValue().matchAll(/TEST_NAME "([^"]+)"/g)].map(m => m[1]);
-      return all.filter(t => t !== 'ovip_mem_test').concat(all.includes('ovip_mem_test') ? ['ovip_mem_test'] : []);
+      return [...this.cm().getValue().matchAll(/TEST_NAME "([^"]+)"/g)].map(m => m[1]);
     },
     setTest(name) {
       const cm = this.cm();

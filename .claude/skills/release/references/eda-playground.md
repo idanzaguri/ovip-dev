@@ -80,9 +80,10 @@ The bundles to run, and what each one proves:
   64-bit). Present in every run since before v0.4.0.
 - Xcelium: `xmsim: *W,PRPASZ` on `uvm_string_to_bits` / `uvm_bits_to_string`,
   a probe-size notice from the Playground's run setup.
-- `ovip_mem_test` ends with "Execution interrupted or reached maximum
-  runtime": its write_bytestream benchmark exceeds the Playground cap. The user
-  declined to split the benchmark out; do not propose it again.
+- `ovip_mem_test` runs its write_bytestream benchmark for 15 s of wall time on
+  the Playground (`eda_tb.sv` defines `OVIP_EDA_PLAYGROUND`; locally it is 1000
+  rounds) and prints a `ROUNDS:` line with the rate. A run that ends with
+  "Execution interrupted or reached maximum runtime" is a failure.
 - The Playground sometimes loses a job: the log ends with "This process
   not found on server." and no `Done` line. The runner clicks Run again,
   up to three attempts; a log that still ends that way is a lost run, not
