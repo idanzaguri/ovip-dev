@@ -6,7 +6,8 @@ Checks:
   - the working tree is clean and on main
   - the range since the public repo's last "Sync from ovip-dev @ <sha>" commit
   - per VIP: files changed under verif/<vip>/ in that range, the Unreleased
-    block of its CHANGELOG, the current version heading, a suggested bump
+    block of its CHANGELOG, the current version heading, a suggested bump (or
+    the cut already made in the range: the heading differs from the synced one)
     (an "Added" subhead means minor, otherwise patch)
   - config switches: members added to verif/<vip>/src/<vip>_agent_config.sv in
     the range that the CHANGELOG never names (the v0.4.0 near-miss)
@@ -98,13 +99,20 @@ def main():
         src_changed = [f for f in changed if not f.endswith(("CHANGELOG.md", "README.md", "CONTRIBUTING.md"))]
         block, text = unreleased_block(vdir / "CHANGELOG.md")
         version = current_version(text)
+        was = current_version(git("show", f"{since}:verif/{vip}/CHANGELOG.md"))
+        cut = version != was
         subheads = re.findall(r"^### (.+)$", block, re.M)
         kind = "minor" if any(s.startswith("Added") for s in subheads) else ("patch" if block else None)
-        suggest = f"-> {bump(version, kind)} ({kind})" if kind else "unchanged"
+        if cut:
+            suggest = f"cut from {was} in this range"
+        else:
+            suggest = f"-> {bump(version, kind)} ({kind})" if kind else "unchanged"
         print(f"  {vip:<16} {len(changed):>2} file(s) changed, {len(src_changed):>2} of them source;"
               f" Unreleased: {', '.join(subheads) or 'EMPTY'}; version {version} {suggest}")
-        if src_changed and not block:
+        if src_changed and not block and not cut:
             problems.append(f"{vip}: source changed in {rng} but CHANGELOG Unreleased is empty: {', '.join(src_changed)}")
+        if cut and block:
+            problems.append(f"{vip}: cut to {version} in this range but Unreleased still has entries: {', '.join(subheads)}")
 
         cfg = vdir / "src" / f"{vip}_agent_config.sv"
         if cfg.is_file():

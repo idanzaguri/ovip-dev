@@ -28,8 +28,12 @@ python3 .claude/skills/release/scripts/release_check.py
 
 It prints the commit range since the public repo's last `Sync from ovip-dev @
 <sha>` commit, and per VIP: the files changed, the `Unreleased` subheads, the
-current version and a suggested bump. It fails on a dirty tree, a VIP with
-source changes but an empty `Unreleased` block, a config member added to
+current version and a suggested bump (or, once the `docs:` cut commit is in,
+"cut from X.Y.Z in this range": the version heading differs from the synced
+one, and the empty `Unreleased` block is then expected; run it again after the
+cut to see that). It fails on a dirty tree, a VIP with source changes but an
+empty `Unreleased` block and no cut, a cut VIP with entries still under
+`Unreleased`, a config member added to
 `*_agent_config.sv` that the changelog never names (that one nearly shipped
 four undocumented switches in v0.4.0), and a new source file that no package
 or filelist pulls in.
