@@ -9,6 +9,8 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+## [0.3.0] -- 2026-10-26
+
 ### Added -- VIP
 
 - `randomize_idle_payload` in `ovip_apb_agent_config`, requester only:

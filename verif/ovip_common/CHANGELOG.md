@@ -8,6 +8,8 @@ and this package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.5.0] -- 2026-10-26
+
 ### Added
 
 - `ovip_common_defines.sv`: the compile-time defines shared by every VIP.

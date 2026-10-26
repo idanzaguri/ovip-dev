@@ -9,6 +9,8 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+## [0.1.2] -- 2026-10-26
+
 ### Changed -- VIP
 
 - `ovip_ace_pkg` declares `timeunit 1ns; timeprecision 1ps;`. The

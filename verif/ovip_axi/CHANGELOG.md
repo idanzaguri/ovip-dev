@@ -9,6 +9,8 @@ breaks are called out explicitly in their changelog entry.
 
 ## [Unreleased]
 
+## [0.5.0] -- 2026-10-26
+
 ### Added -- VIP
 
 - `ovip_axi_simple_wr_bursts_seq.qos[$]`: the AxQOS of each burst, in the
