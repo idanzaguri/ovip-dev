@@ -9,6 +9,8 @@ Maintainer-only utilities. **Not** mirrored to the public `ovip` repo.
 | [`sync_to_public.sh`](sync_to_public.sh) | Mirrors the publishable subset of this repo to the public `ovip` GitHub repo. The allowlist at the top of the script is the source of truth for what's "public". |
 | [`WRAP_IMPLEMENTATION.md`](WRAP_IMPLEMENTATION.md) | Design notes for the deferred AXI WRAP burst implementation. Working document for whoever picks up that feature. |
 
+The release flow that ties these together (update checks, Questa and Verilator regressions, VCS and Xcelium on EDA Playground, push, sync, tag, GitHub Release) is the `/release` skill in [`.claude/skills/release/`](../.claude/skills/release/SKILL.md); its `references/eda-playground.md` is the EDA Playground procedure.
+
 ## compile_check.py
 
 Compile-only, so the default run takes about 15 seconds and is worth running
