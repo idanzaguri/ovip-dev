@@ -18,5 +18,8 @@ files:
   - "src/ovip_axi_stream_tests_pkg.sv"
   - "src/tb.sv"
 
+verilator_config:
+  - "lib/verilator.vlt"
+
 sim_args:
 comp_args:

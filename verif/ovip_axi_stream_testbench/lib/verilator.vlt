@@ -1,0 +1,9 @@
+`verilator_config
+// Config file for Verilator runs of ovip_axi_stream_testbench (test_runner --simulator verilator).
+// (A comment must not start with the word verilator: that is a metacomment.)
+// Signals the tests drive through uvm_hdl_force/uvm_hdl_release need to be
+// forceable and visible to VPI (the mid-test reset tests).
+forceable      -module "tb" -var "aresetn"
+public_flat_rw -module "tb" -var "aresetn"
+forceable      -module "ovip_axi_stream_agent_if" -var "tvalid"
+public_flat_rw -module "ovip_axi_stream_agent_if" -var "tvalid"
